@@ -1,0 +1,45 @@
+{
+  "version": "1.0",
+  "appId": null,
+  "appDisplayName": "App From Scratch",
+  "region": "prod",
+  "environmentId": "f540c354-08b2-e0e4-acfd-2f197582c203",
+  "description": " ",
+  "buildPath": "./dist",
+  "buildEntryPoint": "index.html",
+  "localAppUrl": "http://localhost:3000",
+  "logoPath": "Default",
+  "connectionReferences": {
+    "98f05eea-6e56-42ba-9aff-50e27527e6ee": {
+      "id": "/providers/Microsoft.PowerApps/apis/shared_office365users",
+      "displayName": "Office 365 Users",
+      "dataSources": [
+        "office365users"
+      ],
+      "dataSets": {}
+    }
+  },
+  "databaseReferences": {
+    "default.cds": {
+      "dataSources": {
+        "activitycodedirectories": {
+          "entitySetName": "crc5b_activitycodedirectories",
+          "logicalName": "crc5b_activitycodedirectory"
+        },
+        "codedirectories": {
+          "entitySetName": "crc5b_codedirectories",
+          "logicalName": "crc5b_codedirectory"
+        },
+        "pracovnevykazy": {
+          "entitySetName": "crc5b_pracovnevykazies",
+          "logicalName": "crc5b_pracovnevykazy"
+        },
+        "zakazky": {
+          "entitySetName": "crc5b_zakazkies",
+          "logicalName": "crc5b_zakazky"
+        }
+      },
+      "environmentVariableName": ""
+    }
+  }
+}
