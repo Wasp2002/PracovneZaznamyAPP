@@ -37,6 +37,14 @@
         "zakazky": {
           "entitySetName": "crc5b_zakazkies",
           "logicalName": "crc5b_zakazky"
+        },
+        "orders": {
+          "entitySetName": "crc5b_orderses",
+          "logicalName": "crc5b_orders"
+        },
+        "organization": {
+          "entitySetName": "crc5b_organizations",
+          "logicalName": "crc5b_organization"
         }
       },
       "environmentVariableName": ""

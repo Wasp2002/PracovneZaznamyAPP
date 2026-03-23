@@ -1,10 +1,14 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import claLogo from '../assets/claSK.png'
+import Select from 'react-select'
 import '../App.css'
-import { Crc5b_codedirectoriesService, Crc5b_activitycodedirectoriesService, Office365UsersService } from '../generated'
+import { Crc5b_codedirectoriesService, Crc5b_activitycodedirectoriesService, Office365UsersService, Crc5b_organizationsService, Crc5b_ordersesService } from '../generated'
 import type { Crc5b_codedirectories } from '../generated/models/Crc5b_codedirectoriesModel'
 import type { Crc5b_activitycodedirectories } from '../generated/models/Crc5b_activitycodedirectoriesModel'
+import type { Crc5b_orderses } from '../generated/models/Crc5b_ordersesModel'
+import type { Crc5b_pracovnevykazies } from '../generated/models/Crc5b_pracovnevykaziesModel'
+import type { Crc5b_organizations } from '../generated/models/Crc5b_organizationsModel'
 
 function EditPage() {
     const navigate = useNavigate()
@@ -14,13 +18,17 @@ function EditPage() {
 
     // Stavy pre formulár
     const [reportName, setReportName] = useState('')
-    const [reportLocation, setReportLocation] = useState('')
+    const [reportLocation, setReportLocation] = useState('Kancelária')
     const [reportCode, setReportCode] = useState('')
-    const [reportDate, setReportDate] = useState('')
+    const [reportDate, setReportDate] = useState(new Date().toISOString().split('T')[0])
+    const [selectedCustomer, setSelectedCustomer] = useState('')
+    const [selectedOrder, setSelectedOrder] = useState('')
 
     // Stavy pre data z Dataverse
     const [codes, setCodes] = useState<Crc5b_codedirectories[]>([])
     const [isLoadingCodes, setIsLoadingCodes] = useState(true)
+    const [customers, setCustomers] = useState<Crc5b_organizations[]>([])
+    const [orders, setOrders] = useState<Crc5b_orderses[]>([])
 
     // Stavy pre podriadené činnosti (galéria)
     const [activities, setActivities] = useState<Crc5b_activitycodedirectories[]>([])
@@ -80,6 +88,97 @@ function EditPage() {
         }
         fetchCodes();
     }, []);
+
+    // Načítanie zákazníkov (Organizácií) plnou pagináciou
+    useEffect(() => {
+        async function fetchCustomers() {
+            try {
+                let allData: Crc5b_organizations[] = [];
+                let currentSkipToken: string | undefined = undefined;
+                let loopCount = 0;
+
+                do {
+                    const result: any = await Crc5b_organizationsService.getAll({
+                        orderBy: ['crc5b_organizationname asc'],
+                        maxPageSize: 5000, 
+                        filter: "crc5b_collaborationstatus eq 'Súéasný klient'",
+                        skipToken: currentSkipToken
+                    });
+                    
+                    if (result.error) {
+                        console.error("Chyba API pri zákazníkoch:", result.error);
+                        break;
+                    }
+
+                    if (result.data) {
+                        allData = [...allData, ...result.data];
+                    }
+
+                    if (result['@odata.nextLink']) {
+                        const tokenMatch = result['@odata.nextLink'].match(/skiptoken=([^&]+)/);
+                        currentSkipToken = tokenMatch ? decodeURIComponent(tokenMatch[1]) : undefined;
+                    } else {
+                        currentSkipToken = result.skipToken;
+                    }
+
+                    loopCount++;
+                } while (currentSkipToken && loopCount < 100);
+
+                setCustomers(allData);
+            } catch (err) {
+                console.error("Nepodarilo sa načítať zákazníkov z Dataverse", err);
+            }
+        }
+        fetchCustomers();
+    }, []);
+
+    // Načítanie zákaziek podľa vybraného zákazníka s plnou pagináciou
+    useEffect(() => {
+        async function fetchOrders() {
+            if (!selectedCustomer) {
+                setOrders([]);
+                setSelectedOrder('');
+                return;
+            }
+            try {
+                let allData: Crc5b_orderses[] = [];
+                let currentSkipToken: string | undefined = undefined;
+                let loopCount = 0;
+
+                do {
+                    const result: any = await Crc5b_ordersesService.getAll({
+                        filter: `crc5b_customername eq '${selectedCustomer}' and crc5b_status eq 'Aktívna'`,
+                        orderBy: ['crc5b_customername asc'],
+                        maxPageSize: 5000,
+                        skipToken: currentSkipToken
+                    });
+                    
+                    if (result.error) {
+                        console.error("Chyba API pri zákazkách:", result.error);
+                        break;
+                    }
+
+                    if (result.data) {
+                        allData = [...allData, ...result.data];
+                    }
+
+                    if (result['@odata.nextLink']) {
+                        const tokenMatch = result['@odata.nextLink'].match(/skiptoken=([^&]+)/);
+                        currentSkipToken = tokenMatch ? decodeURIComponent(tokenMatch[1]) : undefined;
+                    } else {
+                        currentSkipToken = result.skipToken;
+                    }
+
+                    loopCount++;
+                } while (currentSkipToken && loopCount < 100);
+
+                setOrders(allData);
+            } catch (err) {
+                console.error("Nepodarilo sa načítať zákazky z Dataverse", err);
+            }
+        }
+        fetchOrders();
+    }, [selectedCustomer]);
 
     // Načítanie podčinností, keď sa zmení vybraný Kód činnosti
     useEffect(() => {
@@ -181,17 +280,79 @@ function EditPage() {
                 <div className="card" style={{ textAlign: 'left', maxWidth: '2000px', margin: '0 auto', backgroundColor: 'var(--bg-white)', color: 'var(--bg-black)' }}>
                     <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
 
-                        {/* POLOŽKA: NÁZOV */}
+                        {/* POLOŽKA: ZÁKAZNÍK (ORGANIZÁCIA) */}
                         <div>
-                            <label style={{ fontWeight: 'bold' }}>Názov výkazu:</label>
-                            <input
-                                type="text"
-                                placeholder="Napr. Práca na projekte X"
-                                value={reportName}
-                                onChange={(e) => setReportName(e.target.value)}
-                                style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '6px', border: '1px solid var(--bg-smoke)', backgroundColor: 'var(--bg-cloud)', color: 'var(--bg-black)', boxSizing: 'border-box' }}
-                                required
-                            />
+                            <label style={{ fontWeight: 'bold' }}>Zákazník:</label>
+                            <div style={{ marginTop: '5px' }}>
+                                <Select
+                                    options={customers.map(c => ({
+                                        value: c.crc5b_organizationname || '',
+                                        label: c.crc5b_organizationname || 'Neznámy zákazník'
+                                    }))}
+                                    value={selectedCustomer ? { value: selectedCustomer, label: selectedCustomer } : null}
+                                    onChange={(selected) => setSelectedCustomer(selected?.value || '')}
+                                    placeholder="-- Vyhľadajte zákazníka --"
+                                    isClearable
+                                    styles={{
+                                        control: (base) => ({
+                                            ...base,
+                                            borderRadius: '6px',
+                                            borderColor: 'var(--bg-smoke)',
+                                            backgroundColor: 'var(--bg-cloud)',
+                                            minHeight: '42px',
+                                        }),
+                                        singleValue: (base) => ({
+                                            ...base,
+                                            color: 'var(--bg-black)'
+                                        }),
+                                        menu: (base) => ({
+                                            ...base,
+                                            color: 'var(--bg-black)'
+                                        })
+                                    }}
+                                />
+                            </div>
+                        </div>
+
+                        {/* POLOŽKA: ZÁKAZKA (ZÁVISLÁ NA ZÁKAZNÍKOVI) */}
+                        <div>
+                            <label style={{ fontWeight: 'bold', color: selectedCustomer ? 'inherit' : 'gray' }}>Zákazka:</label>
+                            <div style={{ marginTop: '5px' }}>
+                                <Select
+                                    options={orders.map(o => ({
+                                        value: o.crc5b_ordersid,
+                                        label: o.crc5b_projecttitle || o.crc5b_customername || 'Neznáma zákazka'
+                                    }))}
+                                    value={selectedOrder ? {
+                                        value: selectedOrder,
+                                        label: (() => {
+                                            const o = orders.find(ord => ord.crc5b_ordersid === selectedOrder);
+                                            return o ? (o.crc5b_projecttitle || o.crc5b_customername || 'Neznáma zákazka') : '';
+                                        })()
+                                    } : null}
+                                    onChange={(selected) => setSelectedOrder(selected?.value || '')}
+                                    isDisabled={!selectedCustomer}
+                                    placeholder="-- Vyhľadajte zákazku --"
+                                    isClearable
+                                    styles={{
+                                        control: (base, state) => ({
+                                            ...base,
+                                            borderRadius: '6px',
+                                            borderColor: 'var(--bg-smoke)',
+                                            backgroundColor: state.isDisabled ? '#e2e8f0' : 'var(--bg-cloud)',
+                                            minHeight: '42px',
+                                        }),
+                                        singleValue: (base) => ({
+                                            ...base,
+                                            color: 'var(--bg-black)'
+                                        }),
+                                        menu: (base) => ({
+                                            ...base,
+                                            color: 'var(--bg-black)'
+                                        })
+                                    }}
+                                />
+                            </div>
                         </div>
 
                         {/* POLOŽKA: LOKALITA */}

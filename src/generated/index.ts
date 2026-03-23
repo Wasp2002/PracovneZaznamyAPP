@@ -7,6 +7,8 @@
 export * as CommonModels from './models/CommonModels';
 export * as Crc5b_activitycodedirectoriesModel from './models/Crc5b_activitycodedirectoriesModel';
 export * as Crc5b_codedirectoriesModel from './models/Crc5b_codedirectoriesModel';
+export * as Crc5b_ordersesModel from './models/Crc5b_ordersesModel';
+export * as Crc5b_organizationsModel from './models/Crc5b_organizationsModel';
 export * as Crc5b_pracovnevykaziesModel from './models/Crc5b_pracovnevykaziesModel';
 export * as Crc5b_zakazkiesModel from './models/Crc5b_zakazkiesModel';
 export * as Office365UsersModel from './models/Office365UsersModel';
@@ -14,6 +16,8 @@ export * as Office365UsersModel from './models/Office365UsersModel';
 // Services
 export * from './services/Crc5b_activitycodedirectoriesService';
 export * from './services/Crc5b_codedirectoriesService';
+export * from './services/Crc5b_ordersesService';
+export * from './services/Crc5b_organizationsService';
 export * from './services/Crc5b_pracovnevykaziesService';
 export * from './services/Crc5b_zakazkiesService';
 export * from './services/Office365UsersService';

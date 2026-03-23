@@ -4,6 +4,7 @@ import claLogo from '../assets/claSK.png'
 import '../App.css'
 import { Crc5b_pracovnevykaziesService, Office365UsersService } from '../generated'
 import type { Crc5b_pracovnevykazies } from '../generated/models/Crc5b_pracovnevykaziesModel'
+import { appConfig } from '../appConfig'
 
 function HomePage() {
   const navigate = useNavigate()
@@ -12,6 +13,7 @@ function HomePage() {
   const [isLoading, setIsLoading] = useState(true)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
+  const [isAdmin, setIsAdmin] = useState(false)
   // Stav pre prihláseného používateľa
   const [userProfile, setUserProfile] = useState<{ displayName: string, mail: string, photo?: string }>({
     displayName: 'Načítavam používateľa...',
@@ -63,10 +65,18 @@ function HomePage() {
         let currentSkipToken: string | undefined = undefined;
         let loopCount = 0; // len bezpečnostná brzda
 
+        // Skontrolujeme, či je aktuálny používateľ adminom podľa globálnej konfigurácie
+        const isAdminUser = !!(currentMail && appConfig.adminEmails.includes(currentMail.toLowerCase()));
+        setIsAdmin(isAdminUser);
+
         do {
           const result: any = await Crc5b_pracovnevykaziesService.getAll({ 
-             top: 5000,
+             // Miesto 'top' (čo v OData znamená "maximálny celkový počet") musíme použiť 'maxPageSize'. 
+             // Tým povolíme Dataverse vrátiť skipToken pre ďalšiu stranu a neprerušiť pýtanie po 5000 záznamoch.
+             maxPageSize: 5000, 
              orderBy: ['crc5b_datum desc', 'createdon desc'],
+             // Ak je admin, filter sa neaplikuje (stiahne všetko), inak filtruje len svoj email
+             filter: isAdminUser ? undefined : (currentMail ? `crc5b_email eq '${currentMail}'` : undefined),
              skipToken: currentSkipToken
           });
 
@@ -81,10 +91,18 @@ function HomePage() {
              allData = [...allData, ...result.data];
           }
 
-          // Ak máme token pre ďalšiu stranu, pokračujeme
-          currentSkipToken = result.skipToken;
+          // Ak máme URL pre ďalšiu stranu (Dataverse často vracia celú URL do @odata.nextLink a niekedy iba token do skipToken)
+          // skontrolujeme oboje.
+          if (result['@odata.nextLink']) {
+             // Z Dataverse @odata.nextLink musime vyextrahovat skiptoken, ak ho tam pridáva
+             const tokenMatch = result['@odata.nextLink'].match(/skiptoken=([^&]+)/);
+             currentSkipToken = tokenMatch ? decodeURIComponent(tokenMatch[1]) : undefined;
+          } else {
+             currentSkipToken = result.skipToken; // fallback
+          }
+
           loopCount++;
-        } while (currentSkipToken && loopCount < 50); // limit pre istotu max 50 stran * 500 = 25000 zaznamov
+        } while (currentSkipToken && loopCount < 1000); // 1000 iterácií pri 5000 záznamoch nám dovolí stiahnuť až 5 miliónov záznamov
 
         if (isError) {
           setErrorMsg(errorMessage);
@@ -116,9 +134,10 @@ function HomePage() {
     loadData();
   }, []);
 
-  // Zoskupenie výkazov: Rok -> Mesiac -> Deň (s použitím useMemo pre výkon)
+  // Zoskupenie výkazov: Pracovník (pre admina) -> Rok -> Mesiac -> Deň (s použitím useMemo pre výkon)
   const groupedVykazy = useMemo(() => {
-    const years: Record<number, Record<number, Record<number | string, Crc5b_pracovnevykazies[]>>> = {};
+    // Štruktúra: { Zamestnanec: { Rok: { Mesiac: { Deň: [...] } } } }
+    const employees: Record<string, Record<number, Record<number, Record<number | string, Crc5b_pracovnevykazies[]>>>> = {};
 
     vykazy.forEach(vykaz => {
       // Ak záznam nemá dátum, dáme ho do "0" aby sa aspoň zobrazil
@@ -135,14 +154,18 @@ function HomePage() {
         }
       }
 
-      if (!years[y]) years[y] = {};
-      if (!years[y][m]) years[y][m] = {};
-      if (!years[y][m][d]) years[y][m][d] = [];
+      // Zistíme meno do top level štruktúry
+      const worker = isAdmin ? (vykaz.crc5b_pracovnik || 'Nezaradený pracovník') : 'MOJ_VYKAZ';
 
-      years[y][m][d].push(vykaz);
+      if (!employees[worker]) employees[worker] = {};
+      if (!employees[worker][y]) employees[worker][y] = {};
+      if (!employees[worker][y][m]) employees[worker][y][m] = {};
+      if (!employees[worker][y][m][d]) employees[worker][y][m][d] = [];
+
+      employees[worker][y][m][d].push(vykaz);
     });
-    return years;
-  }, [vykazy]);
+    return employees;
+  }, [vykazy, isAdmin]);
 
   // Prepínanie rozbalenia podľa identifikátora
   const toggleExpand = (key: string) => {
@@ -201,19 +224,45 @@ function HomePage() {
           ) : (
             <div style={{ marginTop: '20px' }}>
               {Object.entries(groupedVykazy)
-                .sort(([y1], [y2]) => Number(y2) - Number(y1)) // Zoradiť roky od najnovšieho
-                .map(([yKey, months]) => {
-                  const yId = `y-${yKey}`;
-                  const isYearExp = expanded[yId];
-                  const displayYear = yKey === "0" ? "Bez priradeného dátumu" : `Rok ${yKey}`;
-
-                  // Výpočet sumy pre ROK
-                  const yearRecords = Object.values(months).flatMap(daysMap => Object.values(daysMap).flat());
-                  const yearSum = yearRecords.reduce((acc, rec) => acc + (parseFloat(rec.crc5b_hodiny || '0') || 0), 0);
+                .sort(([e1], [e2]) => e1.localeCompare(e2))
+                .map(([empKey, years]) => {
+                  const eId = `e-${empKey}`;
+                  const isEmpExp = !isAdmin || expanded[eId]; // Nezamestnanec (bez admina) má túto úroveň vždy zobrazenú
+                  
+                  // Suma pre zamestnanca
+                  const empRecords = Object.values(years).flatMap(y => Object.values(y).flatMap(m => Object.values(m).flat()));
+                  const empSum = empRecords.reduce((acc, rec) => acc + (parseFloat(rec.crc5b_hodiny || '0') || 0), 0);
 
                   return (
-                    <div key={yKey} style={{ marginBottom: '15px' }}>
-                      {/* ROK hlavička */}
+                    <div key={empKey} style={{ marginBottom: isAdmin ? '25px' : '0' }}>
+                      {/* HLAVIČKA ZAMESTNANCA (iba pre admina) */}
+                      {isAdmin && (
+                        <div
+                          onClick={() => toggleExpand(eId)}
+                          style={{ cursor: 'pointer', fontWeight: 'bold', fontSize: '1.2em', padding: '12px', backgroundColor: '#e2e8f0', color: 'var(--bg-navy)', borderLeft: '5px solid var(--bg-navy)', borderRadius: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}
+                        >
+                          <span>{expanded[eId] ? '▼' : '▶'} 👤 {empKey}</span>
+                          <span style={{ fontSize: '0.9em', backgroundColor: 'white', padding: '4px 10px', borderRadius: '4px' }}>Spolu: {empSum.toFixed(2)} h</span>
+                        </div>
+                      )}
+
+                      {/* ROKY */}
+                      {isEmpExp && (
+                        <div style={{ marginLeft: isAdmin ? '15px' : '0' }}>
+                          {Object.entries(years)
+                            .sort(([y1], [y2]) => Number(y2) - Number(y1)) // Zoradiť roky od najnovšieho
+                            .map(([yKey, months]) => {
+                              const yId = `y-${empKey}-${yKey}`;
+                              const isYearExp = expanded[yId];
+                              const displayYear = yKey === "0" ? "Bez priradeného dátumu" : `Rok ${yKey}`;
+
+                              // Výpočet sumy pre ROK
+                              const yearRecords = Object.values(months).flatMap(daysMap => Object.values(daysMap).flat());
+                              const yearSum = yearRecords.reduce((acc, rec) => acc + (parseFloat(rec.crc5b_hodiny || '0') || 0), 0);
+
+                              return (
+                                <div key={yKey} style={{ marginBottom: '15px' }}>
+                                  {/* ROK hlavička */}
                       <div
                         onClick={() => toggleExpand(yId)}
                         style={{ cursor: 'pointer', fontWeight: 'bold', fontSize: '1.2em', padding: '12px', backgroundColor: 'var(--bg-navy)', color: 'white', borderRadius: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
@@ -228,7 +277,7 @@ function HomePage() {
                           {Object.entries(months)
                             .sort(([m1], [m2]) => Number(m2) - Number(m1)) // Zoradiť mesiace zostupne
                             .map(([mKey, days]) => {
-                              const mId = `m-${yKey}-${mKey}`;
+                              const mId = `m-${empKey}-${yKey}-${mKey}`;
                               const isMonthExp = expanded[mId];
 
                               let monthCapitalized = "Nezaradené";
@@ -263,7 +312,7 @@ function HomePage() {
                                           return Number(d2) - Number(d1);
                                         }) // Zoradiť dni zostupne
                                         .map(([dKey, records]) => {
-                                          const dId = `d-${yKey}-${mKey}-${dKey}`;
+                                          const dId = `d-${empKey}-${yKey}-${mKey}-${dKey}`;
                                           const isDayExp = expanded[dId];
 
                                           const displayDay = dKey === 'Neznámy dátum' ? dKey : `${dKey}. ${monthCapitalized.toLowerCase()}`;
@@ -288,26 +337,26 @@ function HomePage() {
                                                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9em', minWidth: '500px', backgroundColor: 'white' }}>
                                                     <thead>
                                                       <tr style={{ borderBottom: '2px solid var(--bg-smoke)', backgroundColor: 'var(--bg-cloud)' }}>
-                                                        <th style={{ padding: '8px', textAlign: 'left' }}>Činnosť / Kód</th>
-                                                        <th style={{ padding: '8px', textAlign: 'left' }}>Popis</th>
-                                                        <th style={{ padding: '8px', textAlign: 'center' }}>Hodiny</th>
-                                                        <th style={{ padding: '8px', textAlign: 'left' }}>Lokalita</th>
+                                                        <th style={{ padding: '8px', textAlign: 'left' }}>Zákazník</th>
+                                                        <th style={{ padding: '8px', textAlign: 'left' }}>Zákazka</th>
+                                                        <th style={{ padding: '8px', textAlign: 'center' }}>Popis</th>
+                                                        <th style={{ padding: '8px', textAlign: 'left' }}>Hodiny</th>
                                                       </tr>
                                                     </thead>
                                                     <tbody>
                                                       {records.map(rec => (
                                                         <tr key={rec.crc5b_pracovnevykazyid} style={{ borderBottom: '1px solid var(--bg-smoke)' }}>
                                                           <td style={{ padding: '8px' }}>
-                                                            {rec.crc5b_activitycodename || rec.crc5b_codename || '-'}
+                                                            {rec.crc5b_zakaznik || '-'}
                                                           </td>
                                                           <td style={{ padding: '8px' }}>
-                                                            {rec.crc5b_popiscinnosti || '-'}
+                                                            {rec.crc5b_zakazkaklienta || '-'}
                                                           </td>
                                                           <td style={{ padding: '8px', textAlign: 'center', fontWeight: 'bold' }}>
-                                                            {rec.crc5b_hodiny ? `${parseFloat(rec.crc5b_hodiny).toFixed(2)} h` : '-'}
+                                                            {rec.crc5b_popiscinnosti || '-'}
                                                           </td>
                                                           <td style={{ padding: '8px' }}>
-                                                            {rec.crc5b_lokalitaname || '-'}
+                                                            {rec.crc5b_hodiny ? `${parseFloat(rec.crc5b_hodiny).toFixed(2)} h` : '-'}
                                                           </td>
                                                         </tr>
                                                       ))}
@@ -323,6 +372,11 @@ function HomePage() {
                                 </div>
                               )
                             })}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
                         </div>
                       )}
                     </div>

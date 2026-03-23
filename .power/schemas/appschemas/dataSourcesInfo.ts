@@ -19,6 +19,20 @@ export const dataSourcesInfo = {
     "dataSourceType": "Dataverse",
     "apis": {}
   },
+  "crc5b_orderses": {
+    "tableId": "",
+    "version": "",
+    "primaryKey": "crc5b_ordersid",
+    "dataSourceType": "Dataverse",
+    "apis": {}
+  },
+  "crc5b_organizations": {
+    "tableId": "",
+    "version": "",
+    "primaryKey": "crc5b_organizationid",
+    "dataSourceType": "Dataverse",
+    "apis": {}
+  },
   "crc5b_pracovnevykazies": {
     "tableId": "",
     "version": "",
