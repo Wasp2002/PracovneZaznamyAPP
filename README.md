@@ -6,16 +6,29 @@ Aplikácia je postavená na rýchlom modernom frontende a priamo sa integruje s 
 
 ## Hlavné technológie
 - **Technologický stack:** React 19, TypeScript, Vite
+- **Užívateľské rozhranie:** `react-select` (pre pokročilé výbery a vyhľadávanie v zoznamoch)
 - **Routovanie:** React Router v7
 - **Integrácie:** 
   - `@microsoft/power-apps` (prístup k Power Apps / Dataverse)
   - Office 365 Users API (informácie o používateľoch)
 - **Komponenty / Modely:** Zákazky (Orders), Pracovné výkazy (Timesheets), Číselníky aktivít.
 
-## Spustenie a vývoj
+## Práca na projekte (Dostupné skripty)
 
-Pre lokálny vývoj naklonujte repozitár a nainštalujte závislosti:
+Pre lokálny vývoj, inštaláciu závislostí a nasadenie môžete použiť nasledujúce príkazy:
 
 ```bash
+# Inštalácia všetkých potrebných závislostí
 npm install
+
+# Spustenie lokálneho vývojového servera (Vite)
 npm run dev
+
+# Vybudovanie produkčného buildu a typová kontrola (TypeScript)
+npm run build
+
+# Analýza a kontrola kvality kódu (ESLint)
+npm run lint
+
+# Zobrazenie náhľadu po vybudovaní produkčnej verzie
+npm run preview
