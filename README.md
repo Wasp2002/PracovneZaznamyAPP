@@ -9,11 +9,11 @@ Aplikácia je postavená na rýchlom modernom frontende a priamo sa integruje s 
 1.  **Zobrazenie výkazov (Prehľad - HomePage):**
     *   Automatické načítanie používateľského profilu a fotografie z Office 365.
     *   Hiearchické zobrazenie zaznamenaných výkazov zoskupených podľa: **Rok -> Mesiac -> Deň**.
-    *   Zobrazenie sumáriu odpracovaných hodín pre dané obdobie.
+    *   Zobrazenie sumáru odpracovaných hodín pre dané obdobie.
     *   Prístupový manažment (bežný používateľ vidí vlastné výkazy, administrátor vidí všetky zoskupené aj podľa konkrétneho zamestnanca).
 2.  **Pridávanie výkazov (EditPage):**
     *   Výber zoznamu zákazníkov (Organizácie) a k nim prislúchajúcich Zákaziek s rýchlym vyhľadávaním využívaním `react-select`.
-    *   Zvolenie **Kódu činnosti**, po ktorom sa automaticky nacítajú konkrétne **Aktivity (Podčinnosti)**.
+    *   Zvolenie **Kódu činnosti**, po ktorom sa automaticky načítajú konkrétne **Aktivity (Podčinnosti)**.
     *   Hromadné zadávanie počtu hodín, množstva a sprievodných poznámok k jednotlivým aktivitám.
     *   Určenie lokality práce (Kancelária, U klienta, Z domu) a výber konkrétneho dátumu.
 
@@ -34,23 +34,40 @@ Aplikácia je postavená na rýchlom modernom frontende a priamo sa integruje s 
 -   `src/appConfig.ts` - Konfigurácia aplikácie obsahujúca definíciu admin používateľov.
 -   `src/generated/` - Modely a služby podľa Power Platform API vygenerovaných skriptami.
 
-## 💻 Práca na projekte (Dostupné skripty)
+## 💻 Práca na projekte a nasadenie do Power Apps
 
-Pre lokálny vývoj, inštaláciu závislostí a nasadenie môžete použiť nasledujúce príkazy v prostredí terminálu:
+Tento projekt využíva štandard "Power Apps code app" podľa [oficiálnej dokumentácie Microsoftu](https://learn.microsoft.com/en-us/power-apps/developer/code-apps/how-to/create-an-app-from-scratch?source=docs). Pre správny vývoj a nasadenie budete potrebovať okrem Node.js aj **Power Platform CLI (`pac`)**.
 
+### 1. Inicializácia projektu (zo šablóny)
+Ak začínate úplne od nuly (nový projekt), stiahnite si základnú štruktúru pre Vite šablónu a prejdite do priečinka:
 ```bash
-# Inštalácia všetkých potrebných NPM závislostí pre projekt
+npx degit github:microsoft/PowerAppsCodeApps/templates/vite my-app
+cd my-app
+```
+*(Poznámka: Ak ste si už naklonovali tento repozitár s hotovou aplikáciou Pracovné Záznamy APP, tento krok preskočte).*
+
+### 2. Prvotné nastavenie a autentifikácia
+Najprv sa musíte prihlásiť a zvoliť správne Power Platform prostredie (environment), s ktorým bude aplikácia komunikovať a do ktorého sa nasadí:
+```bash
+# Vytvorenie autentifikačného profilu
+pac auth create
+
+# Výber cieľového prostredia
+pac env select --environment <Vase_Environment_ID>
+```
+
+### 3. Inštalácia závislostí a lokálny vývoj
+Pre stiahnutie NPM balíčkov a spustenie lokálneho testovania v prehliadači spustite:
+```bash
 npm install
-
-# Spustenie lokálneho vývojového servera (rýchly štart cez Vite)
 npm run dev
+```
+Aplikácia sa spustí na lokálnom Vite servery. *Upozornenie: Otvorte zobrazenú URL adresu v takom profile prehliadača, kde ste prihlásený do svojho Power Platform tenanta.*
 
-# Vybudovanie produkčného buildu do zložky dist (vrátane overenia typov)
-npm run build
-
-# Zistenie potenciálnych chýb cez ESLint linter
-npm run lint
-
-# Lokálne prezeranie vybudovanej produkčnej verzie aplikácie
-npm run preview
+### 4. Vybudovanie (Build) a nasadenie (Push)
+Akonáhle ste s úpravami spokojný, môžete aplikáciu vybudovať a jedným príkazom publikovať (pushnúť) priamo do vášho Power Apps prostredia:
+```bash
+npm run build | pac code push
+```
+Príkaz najskôr zbehne `tsc -b && vite build` a následne CLI presunie zmeny do cloudu. Na konci procesu dostanete URL adresu pre spustenie nasadenej aplikácie v Power Apps.
 ```
