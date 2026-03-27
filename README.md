@@ -70,4 +70,12 @@ Akonáhle ste s úpravami spokojný, môžete aplikáciu vybudovať a jedným pr
 npm run build | pac code push
 ```
 Príkaz najskôr zbehne `tsc -b && vite build` a následne CLI presunie zmeny do cloudu. Na konci procesu dostanete URL adresu pre spustenie nasadenej aplikácie v Power Apps.
-```
+
+## 🚧 Plánované funkcionality (TODO)
+- **Editácia výkazov:** Pridanie možnosti upravovať už zapísané a uložené pracovné záznamy.
+- **Kopírovanie záznamov (Šablóny):** Možnosť duplikovať (naklonovať) existujúci pracovný záznam a použiť ho ako predvyplnenú šablónu pre nový záznam s možnosťou úpravy údajov.
+- **Exportovanie dát:** Pridanie funkcie na export mesačných výkazov do formátu Excel/CSV či PDF pre potreby fakturácie alebo mzdového oddelenia.
+- **Grafický Dashboard:** Zobrazenie vizuálnych štatistík (koláčové/stĺpcové grafy) pre odpracovaný čas rozdelený podľa projektov, zákazníkov alebo kategórie činnosti.
+- **Schvaľovací proces (Approval workflow):** Statusový systém výkazov (Koncept, Odoslané, Schválené). Akonáhle nadriadený výkaz schváli, záznam sa elektronicky uzamkne.
+- **Sledovanie pracovného fondu:** Validácie a notifikácie, ktoré zamestnanca upozornia, ak si v daný deň nevykázal potrebných 8 hodín, alebo ak naopak presiahol limit.
+- **Meranie v reálnom čase (Stopky):** Zabudovaný priamy časovač vo formulári pre automatické štartovanie a zastavenie nahrávania aktivity bez nutnosti manuálne vypisovať odpracované hodiny.
