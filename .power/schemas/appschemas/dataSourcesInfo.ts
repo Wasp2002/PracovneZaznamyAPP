@@ -40,13 +40,6 @@ export const dataSourcesInfo = {
     "dataSourceType": "Dataverse",
     "apis": {}
   },
-  "crc5b_zakazkies": {
-    "tableId": "",
-    "version": "",
-    "primaryKey": "crc5b_zakazkyid",
-    "dataSourceType": "Dataverse",
-    "apis": {}
-  },
   "office365users": {
     "tableId": "",
     "version": "",

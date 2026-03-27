@@ -23,7 +23,7 @@ export interface Crc5b_pracovnevykaziesBase {
   "crc5b_ActivityCode@odata.bind"?: string;
   "crc5b_Code@odata.bind"?: string;
   crc5b_datum: string;
-  crc5b_hodiny: string;
+  crc5b_hodiny: number;
   crc5b_hodinymimopausel?: string;
   crc5b_lokalita: Crc5b_pracovnevykaziescrc5b_lokalita;
   crc5b_popiscinnosti?: string;
@@ -46,7 +46,7 @@ export interface Crc5b_pracovnevykazies extends Crc5b_pracovnevykaziesBase {
   crc5b_activitycodename?: string;
   crc5b_codename?: string;
   crc5b_lokalitaname?: string;
-  crc5b_zakazkaname?: string;
+  crc5b_zakazkaklienta?: string;
   createdbyname?: string;
   createdbyyominame: string;
   createdon?: string;

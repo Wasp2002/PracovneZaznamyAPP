@@ -6,6 +6,9 @@ import { Crc5b_pracovnevykaziesService, Office365UsersService } from '../generat
 import type { Crc5b_pracovnevykazies } from '../generated/models/Crc5b_pracovnevykaziesModel'
 import { appConfig } from '../appConfig'
 
+// Vite globálna premenná pre zobrazenie verzie z času buildu
+declare const __BUILD_DATE__: string;
+
 function HomePage() {
   const navigate = useNavigate()
 
@@ -107,21 +110,25 @@ function HomePage() {
         if (isError) {
           setErrorMsg(errorMessage);
         } else {
-          // Filtrujeme dáta. POZOR: Dataflow vložil meno v tvare "Bodor Sebastián (4169)", nie email!
-          // Skontrolujeme, či stĺpec obsahuje aspoň časť displayName.
-          const namePart = userProfile.displayName ? userProfile.displayName.split(' ')[0] : currentMail;
-          
-          const userVykazy = allData.filter(rec => {
-             if (!rec.crc5b_pracovnik) return false;
-             // ak sa zhoduje mail (fallback) alebo text obsahuje aspon cast mojho mena
-             return rec.crc5b_pracovnik === currentMail || rec.crc5b_pracovnik.includes(namePart);
-          });
-
-          if (userVykazy.length === 0 && allData.length > 0) {
-             console.warn("Filtrovanie neodhalilo žiadne výkazy. Zobrazujem všetky pre ladenie.");
+          // Ak je používateľ admin, priradíme všetky stiahnuté dáta bez ďalšieho osobného filtrovania
+          if (isAdminUser) {
              setVykazy(allData);
           } else {
-             setVykazy(userVykazy);
+             // Pre bežného používateľa skontrolujeme, či stĺpec obsahuje aspoň časť displayName.
+             const namePart = userProfile.displayName ? userProfile.displayName.split(' ')[0] : currentMail;
+             
+             const userVykazy = allData.filter(rec => {
+                if (!rec.crc5b_pracovnik) return false;
+                // ak sa zhoduje mail (fallback) alebo text obsahuje aspon cast mojho mena
+                return rec.crc5b_pracovnik === currentMail || rec.crc5b_pracovnik.includes(namePart);
+             });
+
+             if (userVykazy.length === 0 && allData.length > 0) {
+                console.warn("Filtrovanie neodhalilo žiadne výkazy. Zobrazujem všetky pre ladenie.");
+                setVykazy(allData);
+             } else {
+                setVykazy(userVykazy);
+             }
           }
         }
       } catch (err: any) {
@@ -175,6 +182,11 @@ function HomePage() {
     }));
   };
 
+  // Celkový súčet hodín pre všetkých zobrazených výkazov (pre ne-admina to sú jeho všetky hodiny)
+  const totalHours = useMemo(() => {
+    return vykazy.reduce((acc, rec) => acc + (parseFloat(String(rec.crc5b_hodiny) || '0') || 0), 0);
+  }, [vykazy]);
+
   return (
     <div className="main-layout">
       {/* ĽAVÉ MENU */}
@@ -199,8 +211,13 @@ function HomePage() {
         <ul className="menu-list">
           <li style={{ backgroundColor: 'var(--bg-navy)', color: 'white' }}>🏠 Domov</li>
           <li onClick={() => navigate('/EditPage')}>➕ Nový výkaz</li>
-          <li>⚙️ Nastavenia</li>
+          <li onClick={() => window.open('https://apps.powerapps.com/play/e/86485853-792a-e67b-9761-e3ce683ba850/a/188b2b48-acfb-4a15-8142-75561b73805d?tenantId=1bc48a9d-3e02-4c94-a104-04b1960c5b3b&hint=2a9daae8-78d7-4372-b087-fbb3235e38c1&sourcetime=1774618589242&source=portal', '_blank')}>📅 Dochádzka</li>
         </ul>
+
+        {/* VERZIA APLIKÁCIE (Čas buildu) */}
+        <div style={{ marginTop: 'auto', paddingTop: '20px', fontSize: '0.8em', color: 'var(--bg-smoke)', textAlign: 'center', opacity: 0.7 }}>
+          Verzia: {typeof __BUILD_DATE__ !== 'undefined' ? __BUILD_DATE__ : 'Dev'}
+        </div>
       </div>
 
       {/* HLAVNÉ OKNO */}
@@ -213,7 +230,14 @@ function HomePage() {
         </div>
 
         <div className="card" style={{ textAlign: 'left', backgroundColor: 'var(--bg-white)', color: 'var(--bg-black)' }}>
-          <h2 style={{ marginTop: '0', borderBottom: '2px solid var(--bg-smoke)', paddingBottom: '10px' }}>Moje pracovné výkazy</h2>
+          <h2 style={{ marginTop: '0', borderBottom: '2px solid var(--bg-smoke)', paddingBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>Moje pracovné výkazy</span>
+            {!isAdmin && (
+              <span style={{ fontSize: '0.85em', backgroundColor: 'var(--bg-navy)', color: 'white', padding: '4px 12px', borderRadius: '4px', fontWeight: 'normal' }}>
+                Spolu: {totalHours.toFixed(2)} h
+              </span>
+            )}
+          </h2>
 
           {isLoading ? (
             <div style={{ color: 'var(--bg-navy)' }}>Načítavam dáta z Dataverse...</div>
@@ -231,7 +255,7 @@ function HomePage() {
                   
                   // Suma pre zamestnanca
                   const empRecords = Object.values(years).flatMap(y => Object.values(y).flatMap(m => Object.values(m).flat()));
-                  const empSum = empRecords.reduce((acc, rec) => acc + (parseFloat(rec.crc5b_hodiny || '0') || 0), 0);
+                  const empSum = empRecords.reduce((acc, rec) => acc + (parseFloat(String(rec.crc5b_hodiny) || '0') || 0), 0);
 
                   return (
                     <div key={empKey} style={{ marginBottom: isAdmin ? '25px' : '0' }}>
@@ -258,7 +282,7 @@ function HomePage() {
 
                               // Výpočet sumy pre ROK
                               const yearRecords = Object.values(months).flatMap(daysMap => Object.values(daysMap).flat());
-                              const yearSum = yearRecords.reduce((acc, rec) => acc + (parseFloat(rec.crc5b_hodiny || '0') || 0), 0);
+                              const yearSum = yearRecords.reduce((acc, rec) => acc + (parseFloat(String(rec.crc5b_hodiny) || '0') || 0), 0);
 
                               return (
                                 <div key={yKey} style={{ marginBottom: '15px' }}>
@@ -289,7 +313,7 @@ function HomePage() {
 
                               // Výpočet sumy pre MESIAC
                               const monthRecords = Object.values(days).flat();
-                              const monthSum = monthRecords.reduce((acc, rec) => acc + (parseFloat(rec.crc5b_hodiny || '0') || 0), 0);
+                              const monthSum = monthRecords.reduce((acc, rec) => acc + (parseFloat(String(rec.crc5b_hodiny) || '0') || 0), 0);
 
                               return (
                                 <div key={mKey} style={{ marginBottom: '10px' }}>
@@ -318,7 +342,7 @@ function HomePage() {
                                           const displayDay = dKey === 'Neznámy dátum' ? dKey : `${dKey}. ${monthCapitalized.toLowerCase()}`;
 
                                           // Výpočet sumy pre DEŇ
-                                          const daySum = records.reduce((acc, rec) => acc + (parseFloat(rec.crc5b_hodiny || '0') || 0), 0);
+                                          const daySum = records.reduce((acc, rec) => acc + (parseFloat(String(rec.crc5b_hodiny) || '0') || 0), 0);
 
                                           return (
                                             <div key={dKey} style={{ marginBottom: '8px' }}>
@@ -356,7 +380,7 @@ function HomePage() {
                                                             {rec.crc5b_popiscinnosti || '-'}
                                                           </td>
                                                           <td style={{ padding: '8px' }}>
-                                                            {rec.crc5b_hodiny ? `${parseFloat(rec.crc5b_hodiny).toFixed(2)} h` : '-'}
+                                                            {rec.crc5b_hodiny ? `${parseFloat(String(rec.crc5b_hodiny) || '0').toFixed(2)} h` : '-'}
                                                           </td>
                                                         </tr>
                                                       ))}

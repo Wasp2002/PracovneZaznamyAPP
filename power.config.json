@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "appId": "ecacc91c-f616-4440-b68c-a92fc1973442",
-  "appDisplayName": "App From Scratch",
+  "appDisplayName": "Pracovné výkazy",
   "region": "prod",
   "environmentId": "f540c354-08b2-e0e4-acfd-2f197582c203",
   "description": " ",
@@ -33,10 +33,6 @@
         "pracovnevykazy": {
           "entitySetName": "crc5b_pracovnevykazies",
           "logicalName": "crc5b_pracovnevykazy"
-        },
-        "zakazky": {
-          "entitySetName": "crc5b_zakazkies",
-          "logicalName": "crc5b_zakazky"
         },
         "orders": {
           "entitySetName": "crc5b_orderses",

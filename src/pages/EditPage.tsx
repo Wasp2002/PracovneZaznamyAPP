@@ -3,12 +3,14 @@ import { useNavigate } from 'react-router-dom'
 import claLogo from '../assets/claSK.png'
 import Select from 'react-select'
 import '../App.css'
-import { Crc5b_codedirectoriesService, Crc5b_activitycodedirectoriesService, Office365UsersService, Crc5b_organizationsService, Crc5b_ordersesService } from '../generated'
+import { Crc5b_codedirectoriesService, Crc5b_activitycodedirectoriesService, Office365UsersService, Crc5b_organizationsService, Crc5b_ordersesService, Crc5b_pracovnevykaziesService } from '../generated'
 import type { Crc5b_codedirectories } from '../generated/models/Crc5b_codedirectoriesModel'
 import type { Crc5b_activitycodedirectories } from '../generated/models/Crc5b_activitycodedirectoriesModel'
 import type { Crc5b_orderses } from '../generated/models/Crc5b_ordersesModel'
-import type { Crc5b_pracovnevykazies } from '../generated/models/Crc5b_pracovnevykaziesModel'
 import type { Crc5b_organizations } from '../generated/models/Crc5b_organizationsModel'
+
+// Vite globálna premenná pre zobrazenie verzie z času buildu
+declare const __BUILD_DATE__: string;
 
 function EditPage() {
     const navigate = useNavigate()
@@ -17,7 +19,6 @@ function EditPage() {
     const [userProfile, setUserProfile] = useState<{ displayName: string; mail: string; photo?: string }>({ displayName: 'Načítavam...', mail: '...' })
 
     // Stavy pre formulár
-    const [reportName, setReportName] = useState('')
     const [reportLocation, setReportLocation] = useState('Kancelária')
     const [reportCode, setReportCode] = useState('')
     const [reportDate, setReportDate] = useState(new Date().toISOString().split('T')[0])
@@ -42,7 +43,7 @@ function EditPage() {
                 const profileResult = await Office365UsersService.MyProfile_V2();
                 if (profileResult.data) {
                     const currentMail = profileResult.data.mail || profileResult.data.userPrincipalName || '';
-                    
+
                     let photo = '';
                     try {
                         const photoRes = await Office365UsersService.UserPhoto_V2(currentMail);
@@ -50,7 +51,7 @@ function EditPage() {
                             photo = photoRes.data.startsWith('data:') ? photoRes.data : `data:image/jpeg;base64,${photoRes.data}`;
                         }
                     } catch (e) {
-                         console.log("Nepodarilo sa načítať fotku, použije sa predvolený avatar.");
+                        console.log("Nepodarilo sa načítať fotku, použije sa predvolený avatar.");
                     }
 
                     setUserProfile({
@@ -100,11 +101,11 @@ function EditPage() {
                 do {
                     const result: any = await Crc5b_organizationsService.getAll({
                         orderBy: ['crc5b_organizationname asc'],
-                        maxPageSize: 5000, 
+                        maxPageSize: 5000,
                         filter: "crc5b_collaborationstatus eq 'Súéasný klient'",
                         skipToken: currentSkipToken
                     });
-                    
+
                     if (result.error) {
                         console.error("Chyba API pri zákazníkoch:", result.error);
                         break;
@@ -147,12 +148,13 @@ function EditPage() {
 
                 do {
                     const result: any = await Crc5b_ordersesService.getAll({
-                        filter: `crc5b_customername eq '${selectedCustomer}' and crc5b_status eq 'Aktívna'`,
-                        orderBy: ['crc5b_customername asc'],
+                        filter: `crc5b_customername eq '${selectedCustomer}'`,
+                        orderBy: ['crc5b_projecttitle asc'],
                         maxPageSize: 5000,
-                        skipToken: currentSkipToken
+                        skipToken: currentSkipToken,
+                        select: ['crc5b_ordersid', 'crc5b_projecttitle', 'crc5b_customername']
                     });
-                    
+
                     if (result.error) {
                         console.error("Chyba API pri zákazkách:", result.error);
                         break;
@@ -232,10 +234,97 @@ function EditPage() {
     }, 0);
 
     // Funkcia po odoslaní formulára
-    const handleSave = (e: React.FormEvent) => {
+    const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
-        const selectedCodeObj = codes.find(c => c.crc5b_codedirectoryid === reportCode);
-        alert(`Výkaz udelený!\nNázov: ${reportName}\nLokalita: ${reportLocation}\nKód: ${selectedCodeObj ? selectedCodeObj.crc5b_code : reportCode}\nDátum: ${reportDate}\nSpolu hodín: ${totalHours.toFixed(1)}\nAktivity boli uložené v state: ${Object.values(activityForms).filter(a => a.time || a.count || a.note).length} záznamov.`);
+
+        console.log("Prvá zákazka – všetky polia:", JSON.stringify(orders[0], null, 2));
+        console.log("selectedOrder:", selectedOrder);
+
+        if (!selectedOrder) {
+            alert('Prosím, vyberte zákazku.');
+            return;
+        }
+
+        const filledActivities = Object.entries(activityForms).filter(([, data]) => data.time || data.count || data.note);
+
+        if (filledActivities.length === 0) {
+            alert('Prosím, vyplňte aspoň jednu činnosť (vyplňte čas, počet alebo poznámku).');
+            return;
+        }
+
+        const shouldSave = window.confirm(`Spolu zapísaných hodín: ${totalHours.toFixed(1)}. Chcete uložiť výkaz?`);
+        if (!shouldSave) return;
+
+        let lokZaznamu: any = 137690003; // Default Office
+        if (reportLocation === 'Klient' || reportLocation === 'U klienta') lokZaznamu = 137690004;
+        else if (reportLocation === 'Z domu' || reportLocation === 'Home Office') lokZaznamu = 137690005;
+
+        let savedCount = 0;
+        let errorsCount = 0;
+        let lastErrorMsg = '';
+
+        for (const [activityId, data] of filledActivities) {
+            // Získame objekt sub-aktivity pre pomenovanie ak chceme
+            const actObj = activities.find(a => a.crc5b_activitycodedirectoryid === activityId);
+            const actName = actObj ? actObj.crc5b_cinnost : 'Aktivita';
+            const vname = `Výkaz: ${reportDate} - ${selectedCustomer} - ${actName}`;
+
+            // Parse time as decimal number, default to 0 if empty
+            const hodinyDb = data.time ? parseFloat(data.time) : 0;
+
+            const recordToSave: any = {
+                crc5b_datum: reportDate,
+                crc5b_hodiny: hodinyDb,
+                crc5b_lokalita: lokZaznamu,
+                crc5b_pracovnevykazyname: vname.substring(0, 100),
+                crc5b_popiscinnosti: data.note || '',
+                crc5b_pracovnik: userProfile.displayName,
+                crc5b_zakaznik: selectedCustomer,
+                crc5b_zakazkaklienta: orders.find(o => o.crc5b_ordersid === selectedOrder)?.crc5b_projecttitle || '',
+                crc5b_email: userProfile.mail,
+                crc5b_rok: reportDate.split('-')[0],
+                crc5b_mesiac: reportDate.split('-')[1],
+                crc5b_den: reportDate.split('-')[2]
+                // statecode: 0  ← toto zmaž
+            };
+
+            //cordToSave["crc5b_Zakazka@odata.bind"] = `/crc5b_orderses(${selectedOrder})`;
+            recordToSave["crc5b_ActivityCode@odata.bind"] = `/crc5b_activitycodedirectories(${activityId})`;
+
+            if (reportCode) {
+                recordToSave["crc5b_Code@odata.bind"] = `/crc5b_codedirectories(${reportCode})`;
+            }
+
+            console.log("recordToSave:", JSON.stringify(recordToSave, null, 2));
+
+            try {
+                const result = await Crc5b_pracovnevykaziesService.create(recordToSave);
+                if (result.error) {
+                    console.error("Chyba API pri ukladaní záznamu:", result.error);
+                    lastErrorMsg = typeof result.error === 'object' ? JSON.stringify(result.error) : String(result.error);
+                    errorsCount++;
+                } else {
+                    savedCount++;
+                }
+            } catch (err: any) {
+                console.error("FULL ERROR:", JSON.stringify(err, null, 2));
+                lastErrorMsg = err?.message || err?.error?.message || JSON.stringify(err);
+                errorsCount++;
+            }
+        }
+
+        if (errorsCount > 0) {
+            alert(`Záznamy uložené s chybami.\nÚspešne: ${savedCount}\nChyby: ${errorsCount}\nPosledná chyba: ${lastErrorMsg}`);
+        } else {
+            alert(`Výkaz úspešne uložený!\nVytvorených záznamov: ${savedCount}`);
+            
+            // Vyčistíme iba vyplnené dáta z aktivít, ale necháme ich načítané (štruktúru z Dataverse),
+            // rovnako ako aj zvoleného zákazníka, zákazku a hlavičku pre ďalšie rýchle zadávanie.
+            setActivityForms({});
+
+            // Namiesto redirectu na Home zostávame tu
+            // navigate('/');
+        }
     };
 
     return (
@@ -264,8 +353,13 @@ function EditPage() {
                     <li onClick={() => navigate('/')}>🏠 Domov</li>
                     {/* Tu sme vizuálne označili, že sme aktuálne na tejto stránke */}
                     <li style={{ backgroundColor: 'var(--bg-navy)', color: 'white' }}>➕ Nový výkaz</li>
-                    <li>⚙️ Nastavenia</li>
+                    <li onClick={() => window.open('https://apps.powerapps.com/play/e/86485853-792a-e67b-9761-e3ce683ba850/a/188b2b48-acfb-4a15-8142-75561b73805d?tenantId=1bc48a9d-3e02-4c94-a104-04b1960c5b3b&hint=2a9daae8-78d7-4372-b087-fbb3235e38c1&sourcetime=1774618589242&source=portal', '_blank')}>📅 Dochádzka</li>
                 </ul>
+
+                {/* VERZIA APLIKÁCIE (Čas buildu) */}
+                <div style={{ marginTop: 'auto', paddingTop: '20px', fontSize: '0.8em', color: 'var(--bg-smoke)', textAlign: 'center', opacity: 0.7 }}>
+                  Verzia: {typeof __BUILD_DATE__ !== 'undefined' ? __BUILD_DATE__ : 'Dev'}
+                </div>
             </div>
 
             {/* HLAVNÉ OKNO */}
