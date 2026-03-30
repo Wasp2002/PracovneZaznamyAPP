@@ -15,4 +15,5 @@ export interface IGetAllOptions {
   top?: number;
   skip?: number;
   skipToken?: string;
+  expand?: string;
 }

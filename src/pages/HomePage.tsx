@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import claLogo from '../assets/claSK.png'
 import '../App.css'
-import { Crc5b_pracovnevykaziesService, Office365UsersService } from '../generated'
+import { Crc5b_pracovnevykaziesService, Office365UsersService, Crc5b_ordersesService } from '../generated'
 import type { Crc5b_pracovnevykazies } from '../generated/models/Crc5b_pracovnevykaziesModel'
 import { appConfig } from '../appConfig'
 
@@ -17,6 +17,7 @@ function HomePage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   const [isAdmin, setIsAdmin] = useState(false)
+  const [zakazkyMap, setZakazkyMap] = useState<Record<string, string>>({})
   // Stav pre prihláseného používateľa
   const [userProfile, setUserProfile] = useState<{ displayName: string, mail: string, photo?: string }>({
     displayName: 'Načítavam používateľa...',
@@ -72,6 +73,39 @@ function HomePage() {
         const isAdminUser = !!(currentMail && appConfig.adminEmails.includes(currentMail.toLowerCase()));
         setIsAdmin(isAdminUser);
 
+        // STIAHNUTIE MAPOVANIA ODPORÚČANÝCH ZÁKAZIEK -> PROJECT TITLE
+        try {
+          let ordersAll: any[] = [];
+          let ordSkipToken: string | undefined = undefined;
+          let ordLoop = 0;
+          do {
+            const ordResult: any = await Crc5b_ordersesService.getAll({ 
+               maxPageSize: 5000, 
+               select: ['crc5b_ordersid', 'crc5b_projecttitle'],
+               skipToken: ordSkipToken
+            });
+            if (ordResult.data) {
+               ordersAll = [...ordersAll, ...ordResult.data];
+            }
+            if (ordResult['@odata.nextLink']) {
+               const tokenMatch = ordResult['@odata.nextLink'].match(/skiptoken=([^&]+)/);
+               ordSkipToken = tokenMatch ? decodeURIComponent(tokenMatch[1]) : undefined;
+            } else {
+               ordSkipToken = ordResult.skipToken; 
+            }
+            ordLoop++;
+          } while (ordSkipToken && ordLoop < 100);
+
+          const ordMap: Record<string, string> = {};
+          ordersAll.forEach(o => {
+            ordMap[o.crc5b_ordersid] = o.crc5b_projecttitle || 'Bez názvu projektu';
+          });
+          console.log("Nacitanych zakaziek:", ordersAll.length, "Prva zakazka v mape pre", ordersAll[0]?.crc5b_ordersid, ":", ordMap[ordersAll[0]?.crc5b_ordersid]);
+          setZakazkyMap(ordMap);
+        } catch (e) {
+          console.error("Zlyhalo načítanie orders", e);
+        }
+
         do {
           const result: any = await Crc5b_pracovnevykaziesService.getAll({ 
              // Miesto 'top' (čo v OData znamená "maximálny celkový počet") musíme použiť 'maxPageSize'. 
@@ -80,6 +114,7 @@ function HomePage() {
              orderBy: ['crc5b_datum desc', 'createdon desc'],
              // Ak je admin, filter sa neaplikuje (stiahne všetko), inak filtruje len svoj email
              filter: isAdminUser ? undefined : (currentMail ? `crc5b_email eq '${currentMail}'` : undefined),
+             expand: 'crc5b_Zakazka_klienta($select=crc5b_projecttitle)',
              skipToken: currentSkipToken
           });
 
@@ -91,6 +126,9 @@ function HomePage() {
           }
 
           if (result.data) {
+             if (allData.length === 0 && result.data.length > 0) {
+                console.log("PRVÝ ZÁZNAM PRE DEBUG:", result.data[0]);
+             }
              allData = [...allData, ...result.data];
           }
 
@@ -374,7 +412,10 @@ function HomePage() {
                                                             {rec.crc5b_zakaznik || '-'}
                                                           </td>
                                                           <td style={{ padding: '8px' }}>
-                                                            {rec.crc5b_zakazkaklienta || '-'}
+                                                            {((rec as any)._crc5b_zakazka_klienta_value && zakazkyMap[(rec as any)._crc5b_zakazka_klienta_value]) || 
+                                                             ((rec as any)['_crc5b_zakazka_klienta_value@OData.Community.Display.V1.FormattedValue']) || 
+                                                             ((rec as any).crc5b_zakazka_klienta) || 
+                                                             '-'}
                                                           </td>
                                                           <td style={{ padding: '8px', textAlign: 'center', fontWeight: 'bold' }}>
                                                             {rec.crc5b_popiscinnosti || '-'}

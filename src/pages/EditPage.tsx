@@ -280,15 +280,13 @@ function EditPage() {
                 crc5b_popiscinnosti: data.note || '',
                 crc5b_pracovnik: userProfile.displayName,
                 crc5b_zakaznik: selectedCustomer,
-                crc5b_zakazkaklienta: orders.find(o => o.crc5b_ordersid === selectedOrder)?.crc5b_projecttitle || '',
                 crc5b_email: userProfile.mail,
                 crc5b_rok: reportDate.split('-')[0],
                 crc5b_mesiac: reportDate.split('-')[1],
                 crc5b_den: reportDate.split('-')[2]
-                // statecode: 0  ← toto zmaž
             };
 
-            //cordToSave["crc5b_Zakazka@odata.bind"] = `/crc5b_orderses(${selectedOrder})`;
+            recordToSave["crc5b_Zakazka_klienta@odata.bind"] = `/crc5b_orderses(${selectedOrder})`;
             recordToSave["crc5b_ActivityCode@odata.bind"] = `/crc5b_activitycodedirectories(${activityId})`;
 
             if (reportCode) {

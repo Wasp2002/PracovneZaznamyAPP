@@ -22,6 +22,7 @@ export type Crc5b_pracovnevykaziesstatuscode = keyof typeof Crc5b_pracovnevykazi
 export interface Crc5b_pracovnevykaziesBase {
   "crc5b_ActivityCode@odata.bind"?: string;
   "crc5b_Code@odata.bind"?: string;
+  crc5b_zakazka_klienta?: string;
   crc5b_datum: string;
   crc5b_hodiny: number;
   crc5b_hodinymimopausel?: string;
@@ -47,6 +48,10 @@ export interface Crc5b_pracovnevykazies extends Crc5b_pracovnevykaziesBase {
   crc5b_codename?: string;
   crc5b_lokalitaname?: string;
   crc5b_zakazkaklienta?: string;
+  crc5b_zakazka_klientaname?: string;
+  crc5b_Zakazka?: {
+    crc5b_projecttitle?: string;
+  };
   createdbyname?: string;
   createdbyyominame: string;
   createdon?: string;
