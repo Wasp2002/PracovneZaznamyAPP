@@ -249,6 +249,7 @@ function HomePage() {
         <ul className="menu-list">
           <li style={{ backgroundColor: 'var(--bg-navy)', color: 'white' }}>🏠 Domov</li>
           <li onClick={() => navigate('/EditPage')}>➕ Nový výkaz</li>
+          <li onClick={() => navigate('/DashboardPage')}>📊 Dashboard</li>
           <li onClick={() => window.open('https://apps.powerapps.com/play/e/86485853-792a-e67b-9761-e3ce683ba850/a/188b2b48-acfb-4a15-8142-75561b73805d?tenantId=1bc48a9d-3e02-4c94-a104-04b1960c5b3b&hint=2a9daae8-78d7-4372-b087-fbb3235e38c1&sourcetime=1774618589242&source=portal', '_blank')}>📅 Dochádzka</li>
         </ul>
 
@@ -396,18 +397,19 @@ function HomePage() {
                                               {/* TABUĽKA VÝKAZOV O KONKRÉTNOM DNI */}
                                               {isDayExp && (
                                                 <div style={{ marginLeft: '10px', marginTop: '8px', overflowX: 'auto' }}>
-                                                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9em', minWidth: '500px', backgroundColor: 'white' }}>
+                                                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9em', minWidth: '700px', backgroundColor: 'white', tableLayout: 'fixed' }}>
                                                     <thead>
                                                       <tr style={{ borderBottom: '2px solid var(--bg-smoke)', backgroundColor: 'var(--bg-cloud)' }}>
-                                                        <th style={{ padding: '8px', textAlign: 'left' }}>Zákazník</th>
-                                                        <th style={{ padding: '8px', textAlign: 'left' }}>Zákazka</th>
-                                                        <th style={{ padding: '8px', textAlign: 'center' }}>Popis</th>
-                                                        <th style={{ padding: '8px', textAlign: 'left' }}>Hodiny</th>
+                                                        <th style={{ padding: '8px', textAlign: 'left', width: '20%' }}>Zákazník</th>
+                                                        <th style={{ padding: '8px', textAlign: 'left', width: '25%' }}>Zákazka</th>
+                                                        <th style={{ padding: '8px', textAlign: 'center', width: '35%' }}>Popis</th>
+                                                        <th style={{ padding: '8px', textAlign: 'left', width: '8%' }}>Hodiny</th>
+                                                        <th style={{ padding: '8px', textAlign: 'right', width: '12%' }}>Akcia</th>
                                                       </tr>
                                                     </thead>
                                                     <tbody>
                                                       {records.map(rec => (
-                                                        <tr key={rec.crc5b_pracovnevykazyid} style={{ borderBottom: '1px solid var(--bg-smoke)' }}>
+                                                        <tr key={rec.crc5b_pracovnevykaziesid || rec.crc5b_pracovnevykazyid} style={{ borderBottom: '1px solid var(--bg-smoke)' }}>
                                                           <td style={{ padding: '8px' }}>
                                                             {rec.crc5b_zakaznik || '-'}
                                                           </td>
@@ -417,11 +419,33 @@ function HomePage() {
                                                              ((rec as any).crc5b_zakazka_klienta) || 
                                                              '-'}
                                                           </td>
-                                                          <td style={{ padding: '8px', textAlign: 'center', fontWeight: 'bold' }}>
+                                                          <td style={{ padding: '16px', textAlign: 'center', fontWeight: 'bold' }}>
                                                             {rec.crc5b_popiscinnosti || '-'}
                                                           </td>
                                                           <td style={{ padding: '8px' }}>
                                                             {rec.crc5b_hodiny ? `${parseFloat(String(rec.crc5b_hodiny) || '0').toFixed(2)} h` : '-'}
+                                                          </td>
+                                                          <td style={{ padding: '4px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                                                            <button 
+                                                              title="Upraviť záznam"
+                                                              onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                navigate('/EditPage', { state: { editRecord: rec } });
+                                                              }}
+                                                              style={{ padding: '4px 10px', cursor: 'pointer', backgroundColor: 'var(--bg-navy)', color: 'white', border: 'none', borderRadius: '4px', fontSize: '0.85em', marginRight: '5px' }}
+                                                            >
+                                                              ✏️
+                                                            </button>
+                                                            <button 
+                                                              title="Kopírovať záznam"
+                                                              onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                navigate('/EditPage', { state: { copyRecord: rec } });
+                                                              }}
+                                                              style={{ padding: '4px 10px', cursor: 'pointer', backgroundColor: 'var(--bg-navy)', color: 'var(--bg-navy)', border: '1px solid var(--bg-smoke)', borderRadius: '4px', fontSize: '0.85em', fontWeight: 'bold' }}
+                                                            >
+                                                              📄
+                                                            </button>
                                                           </td>
                                                         </tr>
                                                       ))}

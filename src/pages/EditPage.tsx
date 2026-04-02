@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import claLogo from '../assets/claSK.png'
 import Select from 'react-select'
 import '../App.css'
@@ -14,16 +14,37 @@ declare const __BUILD_DATE__: string;
 
 function EditPage() {
     const navigate = useNavigate()
+    const location = useLocation()
+    const editRecord = location.state?.editRecord as any;
+    const copyRecord = location.state?.copyRecord as any;
+    const isEditMode = !!editRecord;
+    const isCopyMode = !!copyRecord;
+    const sourceRecord = editRecord || copyRecord;
 
     // Stav pre profil používateľa
     const [userProfile, setUserProfile] = useState<{ displayName: string; mail: string; photo?: string }>({ displayName: 'Načítavam...', mail: '...' })
 
     // Stavy pre formulár
-    const [reportLocation, setReportLocation] = useState('Kancelária')
-    const [reportCode, setReportCode] = useState('')
-    const [reportDate, setReportDate] = useState(new Date().toISOString().split('T')[0])
-    const [selectedCustomer, setSelectedCustomer] = useState('')
-    const [selectedOrder, setSelectedOrder] = useState('')
+    const initialLocation = () => {
+        if (!sourceRecord) return 'Kancelária';
+        const loc = sourceRecord.crc5b_lokalita;
+        if (loc === 137690004) return 'Klient';
+        if (loc === 137690005) return 'Z domu';
+        return 'Kancelária';
+    };
+
+    const initialDate = () => {
+        if (sourceRecord && sourceRecord.crc5b_datum) {
+            return sourceRecord.crc5b_datum.split('T')[0];
+        }
+        return new Date().toISOString().split('T')[0];
+    };
+
+    const [reportLocation, setReportLocation] = useState(initialLocation())
+    const [reportCode, setReportCode] = useState(sourceRecord ? (sourceRecord._crc5b_code_value || '') : '')
+    const [reportDate, setReportDate] = useState(initialDate())
+    const [selectedCustomer, setSelectedCustomer] = useState(sourceRecord ? (sourceRecord.crc5b_zakaznik || '') : '')
+    const [selectedOrder, setSelectedOrder] = useState(sourceRecord ? (sourceRecord._crc5b_zakazka_klienta_value || '') : '')
 
     // Stavy pre data z Dataverse
     const [codes, setCodes] = useState<Crc5b_codedirectories[]>([])
@@ -200,10 +221,15 @@ function EditPage() {
                     console.error("Chyba pri načítaní činností:", result.error);
                 } else if (result.data) {
                     setActivities(result.data);
-                    // Inicializácia prázdnych hodnôt pre každú aktivitu, aby sa Inputs dobre kontrolovali
+                    // Inicializácia hodnôt pre každú aktivitu
                     const initialForms: Record<string, { time: string; count: string; note: string }> = {};
                     result.data.forEach(act => {
-                        initialForms[act.crc5b_activitycodedirectoryid] = { time: '', count: '', note: '' };
+                        const isSourceActivity = sourceRecord && sourceRecord._crc5b_activitycode_value === act.crc5b_activitycodedirectoryid;
+                        initialForms[act.crc5b_activitycodedirectoryid] = { 
+                            time: isSourceActivity ? (sourceRecord.crc5b_hodiny || '').toString() : '', 
+                            count: '', 
+                            note: isSourceActivity ? (sourceRecord.crc5b_popiscinnosti || '') : '' 
+                        };
                     });
                     setActivityForms(initialForms);
                 }
@@ -252,7 +278,7 @@ function EditPage() {
             return;
         }
 
-        const shouldSave = window.confirm(`Spolu zapísaných hodín: ${totalHours.toFixed(1)}. Chcete uložiť výkaz?`);
+        const shouldSave = window.confirm(`Spolu zapísaných hodín: ${totalHours.toFixed(2)}. Chcete uložiť výkaz?`);
         if (!shouldSave) return;
 
         let lokZaznamu: any = 137690003; // Default Office
@@ -262,6 +288,20 @@ function EditPage() {
         let savedCount = 0;
         let errorsCount = 0;
         let lastErrorMsg = '';
+
+        if (isEditMode) {
+            const originalActivityId = editRecord._crc5b_activitycode_value;
+            const isOriginalFilled = filledActivities.find(([id]) => id === originalActivityId);
+            if (!isOriginalFilled && originalActivityId) {
+                // Delete the original since it was cleared
+                try {
+                    const idToDelete = editRecord.crc5b_pracovnevykaziesid || editRecord.crc5b_pracovnevykazyid;
+                    await Crc5b_pracovnevykaziesService.delete(idToDelete);
+                } catch (err) {
+                    console.error("Nepodarilo sa zmazať prázdny pôvodný výkaz:", err);
+                }
+            }
+        }
 
         for (const [activityId, data] of filledActivities) {
             // Získame objekt sub-aktivity pre pomenovanie ak chceme
@@ -296,7 +336,16 @@ function EditPage() {
             console.log("recordToSave:", JSON.stringify(recordToSave, null, 2));
 
             try {
-                const result = await Crc5b_pracovnevykaziesService.create(recordToSave);
+                let result;
+                if (isEditMode && activityId === editRecord._crc5b_activitycode_value) {
+                    // Update existing
+                    const idToUpdate = editRecord.crc5b_pracovnevykaziesid || editRecord.crc5b_pracovnevykazyid;
+                    result = await Crc5b_pracovnevykaziesService.update(idToUpdate, recordToSave);
+                } else {
+                    // Create new
+                    result = await Crc5b_pracovnevykaziesService.create(recordToSave);
+                }
+
                 if (result.error) {
                     console.error("Chyba API pri ukladaní záznamu:", result.error);
                     lastErrorMsg = typeof result.error === 'object' ? JSON.stringify(result.error) : String(result.error);
@@ -314,8 +363,13 @@ function EditPage() {
         if (errorsCount > 0) {
             alert(`Záznamy uložené s chybami.\nÚspešne: ${savedCount}\nChyby: ${errorsCount}\nPosledná chyba: ${lastErrorMsg}`);
         } else {
-            alert(`Výkaz úspešne uložený!\nVytvorených záznamov: ${savedCount}`);
+            alert(`Výkaz úspešne uložený!\nVytvorených/upravených záznamov: ${savedCount}`);
             
+            if (isEditMode || isCopyMode) {
+                navigate('/');
+                return;
+            }
+
             // Vyčistíme iba vyplnené dáta z aktivít, ale necháme ich načítané (štruktúru z Dataverse),
             // rovnako ako aj zvoleného zákazníka, zákazku a hlavičku pre ďalšie rýchle zadávanie.
             setActivityForms({});
@@ -350,7 +404,8 @@ function EditPage() {
                     {/* Tu presmerujeme späť na Home */}
                     <li onClick={() => navigate('/')}>🏠 Domov</li>
                     {/* Tu sme vizuálne označili, že sme aktuálne na tejto stránke */}
-                    <li style={{ backgroundColor: 'var(--bg-navy)', color: 'white' }}>➕ Nový výkaz</li>
+                    <li style={{ backgroundColor: 'var(--bg-navy)', color: 'white' }}>{isEditMode ? '✏️ Úprava' : isCopyMode ? '📄 Kópia' : '➕ Nový výkaz'}</li>
+                    <li onClick={() => navigate('/DashboardPage')}>📊 Dashboard</li>
                     <li onClick={() => window.open('https://apps.powerapps.com/play/e/86485853-792a-e67b-9761-e3ce683ba850/a/188b2b48-acfb-4a15-8142-75561b73805d?tenantId=1bc48a9d-3e02-4c94-a104-04b1960c5b3b&hint=2a9daae8-78d7-4372-b087-fbb3235e38c1&sourcetime=1774618589242&source=portal', '_blank')}>📅 Dochádzka</li>
                 </ul>
 
@@ -363,7 +418,7 @@ function EditPage() {
             {/* HLAVNÉ OKNO */}
             <div className="content-container">
                 <div className="header">
-                    <h1>Nový výkaz</h1>
+                    <h1>{isEditMode ? 'Úprava výkazu' : isCopyMode ? 'Kopírovanie výkazu' : 'Nový výkaz'}</h1>
                     <a href="https://www.claslovakia.sk" target="_blank" className="logo-container">
                         <img src={claLogo} className="logo cla" alt="CLA Slovakia logo" />
                     </a>
