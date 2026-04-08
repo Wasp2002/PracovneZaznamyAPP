@@ -409,7 +409,7 @@ function HomePage() {
                                                     </thead>
                                                     <tbody>
                                                       {records.map(rec => (
-                                                        <tr key={rec.crc5b_pracovnevykaziesid || rec.crc5b_pracovnevykazyid} style={{ borderBottom: '1px solid var(--bg-smoke)' }}>
+                                                        <tr key={(rec as any).crc5b_pracovnevykaziesid || rec.crc5b_pracovnevykazyid} style={{ borderBottom: '1px solid var(--bg-smoke)' }}>
                                                           <td style={{ padding: '8px' }}>
                                                             {rec.crc5b_zakaznik || '-'}
                                                           </td>

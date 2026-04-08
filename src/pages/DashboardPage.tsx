@@ -5,7 +5,7 @@ import '../App.css'
 import { Crc5b_pracovnevykaziesService, Office365UsersService, Crc5b_ordersesService } from '../generated'
 import type { Crc5b_pracovnevykazies } from '../generated/models/Crc5b_pracovnevykaziesModel'
 import { appConfig } from '../appConfig'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 
 declare const __BUILD_DATE__: string;
 
@@ -256,13 +256,13 @@ export default function DashboardPage() {
                                                 fill="#8884d8"
                                                 dataKey="value"
                                                 nameKey="name"
-                                                label={({name, percent}) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                                                label={({name, percent}) => `${name} (${((percent ?? 0) * 100).toFixed(0)}%)`}
                                             >
-                                                {chartData.byEmployee.map((entry, index) => (
+                                                {chartData.byEmployee.map((_, index: number) => (
                                                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                                 ))}
                                             </Pie>
-                                            <RechartsTooltip formatter={(value: number) => `${value} h`} />
+                                            <RechartsTooltip formatter={(value: any) => `${value ?? 0} h`} />
                                         </PieChart>
                                     </ResponsiveContainer>
                                 </div>
@@ -276,7 +276,7 @@ export default function DashboardPage() {
                                             <CartesianGrid strokeDasharray="3 3" />
                                             <XAxis type="number" />
                                             <YAxis dataKey="name" type="category" width={100} tick={{fontSize: 12}} />
-                                            <RechartsTooltip formatter={(value: number) => `${value} h`} />
+                                            <RechartsTooltip formatter={(value: any) => `${value ?? 0} h`} />
                                             <Bar dataKey="value" fill="var(--bg-navy)" name="Hodiny" />
                                         </BarChart>
                                     </ResponsiveContainer>
@@ -293,7 +293,7 @@ export default function DashboardPage() {
                                     <CartesianGrid strokeDasharray="3 3" />
                                     <XAxis dataKey="name" angle={-45} textAnchor="end" tick={{fontSize: 11}} height={80} />
                                     <YAxis />
-                                    <RechartsTooltip formatter={(value: number) => `${value} h`} />
+                                    <RechartsTooltip formatter={(value: any) => `${value ?? 0} h`} />
                                     <Bar dataKey="value" fill="#00C49F" name="Odpracované hodiny" />
                                 </BarChart>
                             </ResponsiveContainer>
@@ -314,13 +314,13 @@ export default function DashboardPage() {
                                             outerRadius={120}
                                             fill="#8884d8"
                                             dataKey="value"
-                                            label={({name, percent}) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                                            label={({name, percent}) => `${name} (${((percent ?? 0) * 100).toFixed(0)}%)`}
                                         >
-                                            {chartData.byCustomer.map((entry, index) => (
+                                            {chartData.byCustomer.map((_entry, index) => (
                                                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                             ))}
                                         </Pie>
-                                        <RechartsTooltip formatter={(value: number) => `${value} h`} />
+                                        <RechartsTooltip formatter={(value: any) => `${value ?? 0} h`} />
                                     </PieChart>
                                 </ResponsiveContainer>
                             </div>
@@ -334,7 +334,7 @@ export default function DashboardPage() {
                                         <CartesianGrid strokeDasharray="3 3" />
                                         <XAxis type="number" />
                                         <YAxis dataKey="name" type="category" width={100} tick={{fontSize: 10}} />
-                                        <RechartsTooltip formatter={(value: number) => `${value} h`} />
+                                        <RechartsTooltip formatter={(value: any) => `${value ?? 0} h`} />
                                         <Bar dataKey="value" fill="#FFBB28" name="Hodiny" />
                                     </BarChart>
                                 </ResponsiveContainer>
