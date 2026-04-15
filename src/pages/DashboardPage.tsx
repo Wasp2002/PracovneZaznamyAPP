@@ -195,7 +195,7 @@ export default function DashboardPage() {
         <div className="user-profile">
           <div className="user-avatar" style={userProfile.photo ? { background: 'none' } : {}}>
             {userProfile.photo ? (
-              <img src={userProfile.photo} alt="Profil" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+              <img src={userProfile.photo} alt="Profil" className="user-avatar-image" />
             ) : "👤"}
           </div>
           <div className="user-info">
@@ -206,13 +206,13 @@ export default function DashboardPage() {
 
         <h2>Menu</h2>
         <ul className="menu-list">
-          <li onClick={() => navigate('/')}>🏠 Domov</li>
-          <li onClick={() => navigate('/EditPage')}>➕ Nový výkaz</li>
-          <li style={{ backgroundColor: 'var(--bg-navy)', color: 'white' }}>📊 Dashboard</li>
-          <li onClick={() => window.open('https://apps.powerapps.com/play/e/86485853-792a-e67b-9761-e3ce683ba850/a/188b2b48-acfb-4a15-8142-75561b73805d?tenantId=1bc48a9d-3e02-4c94-a104-04b1960c5b3b&hint=2a9daae8-78d7-4372-b087-fbb3235e38c1&sourcetime=1774618589242&source=portal', '_blank')}>📅 Dochádzka</li>
+          <li className="menu-item" onClick={() => navigate('/')}>🏠 Domov</li>
+          <li className="menu-item" onClick={() => navigate('/EditPage')}>➕ Nový výkaz</li>
+          <li className="menu-item menu-item-active">📊 Dashboard</li>
+          <li className="menu-item" onClick={() => window.open('https://apps.powerapps.com/play/e/86485853-792a-e67b-9761-e3ce683ba850/a/188b2b48-acfb-4a15-8142-75561b73805d?tenantId=1bc48a9d-3e02-4c94-a104-04b1960c5b3b&hint=2a9daae8-78d7-4372-b087-fbb3235e38c1&sourcetime=1774618589242&source=portal', '_blank')}>📅 Dochádzka</li>
         </ul>
 
-        <div style={{ marginTop: 'auto', paddingTop: '20px', fontSize: '0.8em', color: 'var(--bg-smoke)', textAlign: 'center', opacity: 0.7 }}>
+        <div className="app-version">
           Verzia: {typeof __BUILD_DATE__ !== 'undefined' ? __BUILD_DATE__ : 'Dev'}
         </div>
       </div>
@@ -226,24 +226,24 @@ export default function DashboardPage() {
           </a>
         </div>
 
-        <div className="card" style={{ backgroundColor: 'var(--bg-white)', color: 'var(--bg-black)' }}>
-            <h2 style={{ marginTop: '0', borderBottom: '2px solid var(--bg-smoke)', paddingBottom: '10px' }}>
+        <div className="card">
+            <h2 className="page-card-title">
                 Prehľad odpracovaného času ({totalHours.toFixed(2)} h)
             </h2>
 
             {isLoading ? (
-                <div style={{ color: 'var(--bg-navy)', marginTop: '20px' }}>Načítavam dáta pre dashboard...</div>
+                <div className="status-info" style={{ marginTop: '20px' }}>Načítavam dáta pre dashboard...</div>
             ) : errorMsg ? (
-                <div style={{ color: 'red', fontWeight: 'bold', marginTop: '20px' }}>Chyba: {errorMsg}</div>
+                <div className="status-error" style={{ marginTop: '20px' }}>Chyba: {errorMsg}</div>
             ) : chartData.byCustomer.length === 0 ? (
                 <div style={{ marginTop: '20px' }}>Žiadne dáta pre zobrazenie grafov.</div>
             ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '30px', marginTop: '20px' }}>
+                <div className="dashboard-stack">
                     
                     {isAdmin && (
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                            <div style={{ border: '1px solid var(--bg-smoke)', borderRadius: '8px', padding: '15px', backgroundColor: '#f8fafc' }}>
-                                <h3 style={{ textAlign: 'center', marginTop: 0 }}>Zamestnanci (Koláčový graf)</h3>
+                        <div className="dashboard-grid-2">
+                            <div className="chart-card">
+                                <h3>Zamestnanci (Koláčový graf)</h3>
                                 <div style={{ height: '300px' }}>
                                     <ResponsiveContainer width="100%" height="100%">
                                         <PieChart>
@@ -268,8 +268,8 @@ export default function DashboardPage() {
                                 </div>
                             </div>
                             
-                            <div style={{ border: '1px solid var(--bg-smoke)', borderRadius: '8px', padding: '15px', backgroundColor: '#f8fafc' }}>
-                                <h3 style={{ textAlign: 'center', marginTop: 0 }}>Zamestnanci (Hodiny)</h3>
+                            <div className="chart-card">
+                                <h3>Zamestnanci (Hodiny)</h3>
                                 <div style={{ height: '300px' }}>
                                     <ResponsiveContainer width="100%" height="100%">
                                         <BarChart data={chartData.byEmployee} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
@@ -285,8 +285,8 @@ export default function DashboardPage() {
                         </div>
                     )}
 
-                    <div style={{ border: '1px solid var(--bg-smoke)', borderRadius: '8px', padding: '15px', backgroundColor: '#f8fafc' }}>
-                        <h3 style={{ textAlign: 'center', marginTop: 0 }}>Top 15 najčastejších zákaziek</h3>
+                    <div className="chart-card">
+                        <h3>Top 15 najčastejších zákaziek</h3>
                         <div style={{ height: '400px' }}>
                             <ResponsiveContainer width="100%" height="100%">
                                 <BarChart data={chartData.byOrder} margin={{ top: 20, right: 30, left: 20, bottom: 70 }}>
@@ -300,9 +300,9 @@ export default function DashboardPage() {
                         </div>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '20px' }}>
-                        <div style={{ border: '1px solid var(--bg-smoke)', borderRadius: '8px', padding: '15px', backgroundColor: '#f8fafc' }}>
-                            <h3 style={{ textAlign: 'center', marginTop: 0 }}>Hodiny podľa zákazníkov</h3>
+                    <div className="dashboard-grid-2">
+                        <div className="chart-card">
+                            <h3>Hodiny podľa zákazníkov</h3>
                             <div style={{ height: '350px' }}>
                                 <ResponsiveContainer width="100%" height="100%">
                                     <PieChart>
@@ -326,8 +326,8 @@ export default function DashboardPage() {
                             </div>
                         </div>
 
-                        <div style={{ border: '1px solid var(--bg-smoke)', borderRadius: '8px', padding: '15px', backgroundColor: '#f8fafc' }}>
-                            <h3 style={{ textAlign: 'center', marginTop: 0 }}>Top 10 aktivít (Podľa popisu)</h3>
+                        <div className="chart-card">
+                            <h3>Top 10 aktivít (Podľa popisu)</h3>
                             <div style={{ height: '350px' }}>
                                 <ResponsiveContainer width="100%" height="100%">
                                     <BarChart data={chartData.byActivity} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>

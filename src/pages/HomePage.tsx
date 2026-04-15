@@ -220,6 +220,60 @@ function HomePage() {
     }));
   };
 
+  const expandAll = () => {
+    const allKeys: Record<string, boolean> = {};
+
+    Object.entries(groupedVykazy).forEach(([empKey, years]) => {
+      if (isAdmin) {
+        allKeys[`e-${empKey}`] = true;
+      }
+
+      Object.entries(years).forEach(([yKey, months]) => {
+        allKeys[`y-${empKey}-${yKey}`] = true;
+
+        Object.entries(months).forEach(([mKey, days]) => {
+          allKeys[`m-${empKey}-${yKey}-${mKey}`] = true;
+
+          Object.keys(days).forEach((dKey) => {
+            allKeys[`d-${empKey}-${yKey}-${mKey}-${dKey}`] = true;
+          });
+        });
+      });
+    });
+
+    setExpanded(allKeys);
+  };
+
+  const collapseAll = () => {
+    setExpanded({});
+  };
+
+  useEffect(() => {
+    const handleKeydown = (event: KeyboardEvent) => {
+      if (!event.ctrlKey) return;
+
+      const target = event.target as HTMLElement | null;
+      const tagName = target?.tagName;
+      if (tagName === 'INPUT' || tagName === 'TEXTAREA' || tagName === 'SELECT' || target?.isContentEditable) {
+        return;
+      }
+
+      const expandShortcut = event.key === '+' || event.key === '=' || event.code === 'NumpadAdd';
+      const collapseShortcut = event.key === '-' || event.key === '_' || event.code === 'NumpadSubtract';
+
+      if (expandShortcut) {
+        event.preventDefault();
+        expandAll();
+      } else if (collapseShortcut) {
+        event.preventDefault();
+        collapseAll();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeydown);
+    return () => window.removeEventListener('keydown', handleKeydown);
+  }, [groupedVykazy, isAdmin]);
+
   // Celkový súčet hodín pre všetkých zobrazených výkazov (pre ne-admina to sú jeho všetky hodiny)
   const totalHours = useMemo(() => {
     return vykazy.reduce((acc, rec) => acc + (parseFloat(String(rec.crc5b_hodiny) || '0') || 0), 0);
@@ -234,7 +288,7 @@ function HomePage() {
         <div className="user-profile">
           <div className="user-avatar" style={userProfile.photo ? { background: 'none' } : {}}>
             {userProfile.photo ? (
-              <img src={userProfile.photo} alt="Profil" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+              <img src={userProfile.photo} alt="Profil" className="user-avatar-image" />
             ) : (
               "👤"
             )}
@@ -247,14 +301,14 @@ function HomePage() {
 
         <h2>Menu</h2>
         <ul className="menu-list">
-          <li style={{ backgroundColor: 'var(--bg-navy)', color: 'white' }}>🏠 Domov</li>
-          <li onClick={() => navigate('/EditPage')}>➕ Nový výkaz</li>
-          <li onClick={() => navigate('/DashboardPage')}>📊 Dashboard</li>
-          <li onClick={() => window.open('https://apps.powerapps.com/play/e/86485853-792a-e67b-9761-e3ce683ba850/a/188b2b48-acfb-4a15-8142-75561b73805d?tenantId=1bc48a9d-3e02-4c94-a104-04b1960c5b3b&hint=2a9daae8-78d7-4372-b087-fbb3235e38c1&sourcetime=1774618589242&source=portal', '_blank')}>📅 Dochádzka</li>
+          <li className="menu-item menu-item-active">🏠 Domov</li>
+          <li className="menu-item" onClick={() => navigate('/EditPage')}>➕ Nový výkaz</li>
+          <li className="menu-item" onClick={() => navigate('/DashboardPage')}>📊 Dashboard</li>
+          <li className="menu-item" onClick={() => window.open('https://apps.powerapps.com/play/e/86485853-792a-e67b-9761-e3ce683ba850/a/188b2b48-acfb-4a15-8142-75561b73805d?tenantId=1bc48a9d-3e02-4c94-a104-04b1960c5b3b&hint=2a9daae8-78d7-4372-b087-fbb3235e38c1&sourcetime=1774618589242&source=portal', '_blank')}>📅 Dochádzka</li>
         </ul>
 
         {/* VERZIA APLIKÁCIE (Čas buildu) */}
-        <div style={{ marginTop: 'auto', paddingTop: '20px', fontSize: '0.8em', color: 'var(--bg-smoke)', textAlign: 'center', opacity: 0.7 }}>
+        <div className="app-version">
           Verzia: {typeof __BUILD_DATE__ !== 'undefined' ? __BUILD_DATE__ : 'Dev'}
         </div>
       </div>
@@ -268,20 +322,30 @@ function HomePage() {
           </a>
         </div>
 
-        <div className="card" style={{ textAlign: 'left', backgroundColor: 'var(--bg-white)', color: 'var(--bg-black)' }}>
-          <h2 style={{ marginTop: '0', borderBottom: '2px solid var(--bg-smoke)', paddingBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="card">
+          <h2 className="page-card-title">
             <span>Moje pracovné výkazy</span>
-            {!isAdmin && (
-              <span style={{ fontSize: '0.85em', backgroundColor: 'var(--bg-navy)', color: 'white', padding: '4px 12px', borderRadius: '4px', fontWeight: 'normal' }}>
-                Spolu: {totalHours.toFixed(2)} h
-              </span>
-            )}
+            <div className="title-actions">
+              <div className="tree-controls">
+                <button type="button" className="tree-control-btn" onClick={expandAll} title="Rozbaliť celý strom (Ctrl +)">
+                  +
+                </button>
+                <button type="button" className="tree-control-btn" onClick={collapseAll} title="Zbaliť celý strom (Ctrl -)">
+                  -
+                </button>
+              </div>
+              {!isAdmin && (
+                <span className="page-card-badge">
+                  Spolu: {totalHours.toFixed(2)} h
+                </span>
+              )}
+            </div>
           </h2>
 
           {isLoading ? (
-            <div style={{ color: 'var(--bg-navy)' }}>Načítavam dáta z Dataverse...</div>
+            <div className="status-info">Načítavam dáta z Dataverse...</div>
           ) : errorMsg ? (
-            <div style={{ color: 'red', fontWeight: 'bold' }}>Chyba pri načítaní: {errorMsg}</div>
+            <div className="status-error">Chyba pri načítaní: {errorMsg}</div>
           ) : wykazyLength(groupedVykazy) === 0 ? (
             <div>Žiadne pracovné výkazy neboli nájdené. V systéme nie sú prístupné dáta.</div>
           ) : (
@@ -396,24 +460,25 @@ function HomePage() {
 
                                               {/* TABUĽKA VÝKAZOV O KONKRÉTNOM DNI */}
                                               {isDayExp && (
-                                                <div style={{ marginLeft: '10px', marginTop: '8px', overflowX: 'auto' }}>
-                                                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9em', minWidth: '700px', backgroundColor: 'white', tableLayout: 'fixed' }}>
+                                                <div className="table-shell">
+                                                  <table className="table-base" style={{ tableLayout: 'fixed' }}>
                                                     <thead>
                                                       <tr style={{ borderBottom: '2px solid var(--bg-smoke)', backgroundColor: 'var(--bg-cloud)' }}>
-                                                        <th style={{ padding: '8px', textAlign: 'left', width: '20%' }}>Zákazník</th>
-                                                        <th style={{ padding: '8px', textAlign: 'left', width: '25%' }}>Zákazka</th>
-                                                        <th style={{ padding: '8px', textAlign: 'center', width: '35%' }}>Popis</th>
+                                                        <th style={{ padding: '8px', textAlign: 'left', width: '15%' }}>Zákazník</th>
+                                                        <th style={{ padding: '8px', textAlign: 'left', width: '20%' }}>Zákazka</th>
+                                                        <th style={{ padding: '8px', textAlign: 'center', width: '15%'}}>Činnosť</th>
+                                                        <th style={{ padding: '8px', textAlign: 'center', width: '30%' }}>Popis</th>
                                                         <th style={{ padding: '8px', textAlign: 'left', width: '8%' }}>Hodiny</th>
                                                         <th style={{ padding: '8px', textAlign: 'right', width: '12%' }}>Akcia</th>
                                                       </tr>
                                                     </thead>
                                                     <tbody>
                                                       {records.map(rec => (
-                                                        <tr key={(rec as any).crc5b_pracovnevykaziesid || rec.crc5b_pracovnevykazyid} style={{ borderBottom: '1px solid var(--bg-smoke)' }}>
-                                                          <td style={{ padding: '8px' }}>
+                                                        <tr key={(rec as any).crc5b_pracovnevykaziesid || rec.crc5b_pracovnevykazyid}>
+                                                          <td>
                                                             {rec.crc5b_zakaznik || '-'}
                                                           </td>
-                                                          <td style={{ padding: '8px' }}>
+                                                          <td>
                                                             {((rec as any)._crc5b_zakazka_klienta_value && zakazkyMap[(rec as any)._crc5b_zakazka_klienta_value]) || 
                                                              ((rec as any)['_crc5b_zakazka_klienta_value@OData.Community.Display.V1.FormattedValue']) || 
                                                              ((rec as any).crc5b_zakazka_klienta) || 
@@ -422,17 +487,21 @@ function HomePage() {
                                                           <td style={{ padding: '16px', textAlign: 'center', fontWeight: 'bold' }}>
                                                             {rec.crc5b_popiscinnosti || '-'}
                                                           </td>
-                                                          <td style={{ padding: '8px' }}>
+                                                          <td style={{ padding: '16px', textAlign: 'center', fontWeight: 'bold'}}>
+                                                            {rec.crc5b_poznamka || '-'}
+                                                          </td>
+                                                          <td>
                                                             {rec.crc5b_hodiny ? `${parseFloat(String(rec.crc5b_hodiny) || '0').toFixed(2)} h` : '-'}
                                                           </td>
-                                                          <td style={{ padding: '4px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                                                          <td className="table-actions">
                                                             <button 
                                                               title="Upraviť záznam"
                                                               onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 navigate('/EditPage', { state: { editRecord: rec } });
                                                               }}
-                                                              style={{ padding: '4px 10px', cursor: 'pointer', backgroundColor: 'var(--bg-navy)', color: 'white', border: 'none', borderRadius: '4px', fontSize: '0.85em', marginRight: '5px' }}
+                                                              className="btn-icon btn-icon-primary"
+                                                              style={{ marginRight: '5px' }}
                                                             >
                                                               ✏️
                                                             </button>
@@ -442,7 +511,7 @@ function HomePage() {
                                                                 e.stopPropagation();
                                                                 navigate('/EditPage', { state: { copyRecord: rec } });
                                                               }}
-                                                              style={{ padding: '4px 10px', cursor: 'pointer', backgroundColor: 'var(--bg-navy)', color: 'var(--bg-navy)', border: '1px solid var(--bg-smoke)', borderRadius: '4px', fontSize: '0.85em', fontWeight: 'bold' }}
+                                                              className="btn-icon btn-icon-secondary"
                                                             >
                                                               📄
                                                             </button>

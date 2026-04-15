@@ -28,6 +28,7 @@ export interface Crc5b_pracovnevykaziesBase {
   crc5b_hodinymimopausel?: string;
   crc5b_lokalita: Crc5b_pracovnevykaziescrc5b_lokalita;
   crc5b_popiscinnosti?: string;
+  crc5b_poznamka?: string;
   crc5b_pracovnevykazyid: string;
   crc5b_pracovnevykazyname: string;
   crc5b_pracovnik?: string;

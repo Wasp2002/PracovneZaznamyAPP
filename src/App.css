@@ -1,11 +1,17 @@
 :root {
-  --bg-navy: rgba(46, 51, 78, 0.8);
-  --bg-riptide: rgba(125, 210, 211, 0.8);
-  --bg-charcoal: rgba(37, 40, 42, 0.8);
-  --bg-smoke: rgba(171, 174, 171, 0.8);
-  --bg-cloud: rgba(238, 242, 242, 0.8);
-  --bg-black: rgba(0, 0, 0, 0.8);
-  --bg-white: rgba(255, 255, 255, 0.8);
+  --bg-navy: #2e334e;
+  --bg-riptide: #7dd2d3;
+  --bg-charcoal: #25282a;
+  --bg-smoke: #c2c8cd;
+  --bg-cloud: #f2f5f7;
+  --bg-black: #0f172a;
+  --bg-white: #ffffff;
+  --primary-500: #2563eb;
+  --primary-600: #1d4ed8;
+  --success-500: #16a34a;
+  --danger-500: #dc2626;
+  --border-soft: #d7dde3;
+  --shadow-soft: 0 10px 30px rgba(15, 23, 42, 0.08);
 }
 
 #root {
@@ -17,66 +23,78 @@
   text-align: left;
 }
 
-/* HLAVNÝ ROZVRH (FLEXBOX) */
 .main-layout {
   display: flex;
   height: 100%;
   width: 100%;
 }
 
-/* ĽAVÉ MENU (SIDEBAR) */
 .sidebar-container {
-  width: 250px;
-  background-color: var(--bg-riptide); /* TOTO NASTAVUJE FARBU POZADIA ĽAVÉHO MENU (SIDEBARU) */
-  padding: 20px;
-  border-right: 1px solid #333;
-  color: #000000;
+  width: 260px;
+  background: linear-gradient(180deg, #80d6d7 0%, #70c9ca 100%);
+  padding: 24px 20px;
+  border-right: 1px solid rgba(15, 23, 42, 0.15);
+  color: #111827;
   display: flex;
   flex-direction: column;
 }
 
-/* PROFIL POUŽÍVATEĽA V MENU */
 .user-profile {
   display: flex;
   align-items: center;
-  gap: 15px;
-  margin-bottom: 30px; /* Toto potlačí slovo Menu a zoznam nižšie */
+  gap: 12px;
+  margin-bottom: 24px;
   padding-bottom: 20px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  border-bottom: 1px solid rgba(15, 23, 42, 0.12);
 }
 
 .user-avatar {
-  width: 45px;
-  height: 45px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
-  background-color: rgba(0, 0, 0, 0.1);
+  background-color: rgba(255, 255, 255, 0.7);
   display: flex;
   justify-content: center;
   align-items: center;
-  font-size: 1.5em;
+  font-size: 1.4rem;
   overflow: hidden;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.18);
+}
+
+.user-avatar-image {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
 }
 
 .user-info {
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .user-name {
-  font-weight: bold;
-  font-size: 1em;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #0f172a;
 }
 
 .user-email {
-  font-size: 0.8em;
-  opacity: 0.7;
+  font-size: 0.78rem;
+  opacity: 0.78;
+  color: #1f2937;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
 }
 
 .sidebar-container h2 {
-  margin-top: 0;
-  margin-bottom: 20px;
-  border-bottom: 1px solid #444;
+  margin: 0 0 14px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.2);
   padding-bottom: 10px;
+  font-size: 1.05rem;
 }
 
 .menu-list {
@@ -85,66 +103,305 @@
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 10px;
 }
 
-.menu-list li {
+.menu-item {
   cursor: pointer;
-  padding: 10px;
-  background-color: var(--bg-cloud); /* TOTO NASTAVUJE ZÁKLADNÚ FARBU POZADIA POLOŽKY V MENU */
-  border-radius: 6px;
-  transition: background-color 0.2s;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background-color: rgba(255, 255, 255, 0.72);
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+  font-weight: 600;
 }
 
-.menu-list li:hover {
-  background-color: var(--bg-riptide); /* TOTO NASTAVUJE POZADIE POLOŽKY V MENU PO PREJDENÍ MYŠOU (HOVER) */
+.menu-item:hover {
+  background-color: #ffffff;
+  border-color: rgba(15, 23, 42, 0.1);
 }
 
-/* PRAVÁ HLAVNÁ ČAŤ (CONTENT) */
+.menu-item-active {
+  background-color: var(--bg-navy);
+  color: #ffffff;
+  border-color: transparent;
+}
+
+.app-version {
+  margin-top: auto;
+  padding-top: 20px;
+  font-size: 0.8rem;
+  color: #334155;
+  text-align: center;
+  opacity: 0.75;
+}
+
 .content-container {
-  flex: 1; /* Zaberie celú zvyšnú šírku */
-  background-color: var(--bg-cloud); /* TOTO NASTAVUJE FARBU POZADIA PRAVEJ HLAVNEJ ČASTI OBRAZOVKY */
-  padding: 40px;
-  color: #000000;
-  overflow-y: auto; /* Ak bude dlhý obsah, bude sa dať scrollovať iba tu */
-  position: relative; /* Aby fungovalo absolútne pozicovanie loga voči tomuto kontajneru */
+  flex: 1;
+  background: linear-gradient(180deg, #f7fafc 0%, #edf2f7 100%);
+  padding: 28px 32px;
+  color: #0f172a;
+  overflow-y: auto;
+  position: relative;
 }
 
 .header {
   display: flex;
-  justify-content: center; /* Toto zarovná text pekne do stredu */
+  justify-content: center;
   align-items: center;
-  margin-bottom: 40px;
-  min-height: 80px;
+  margin-bottom: 24px;
+  min-height: 70px;
 }
 
 .header h1 {
   margin: 0;
+  font-size: clamp(1.6rem, 2.6vw, 2.2rem);
+  line-height: 1.2;
 }
 
 .logo-container {
   position: absolute;
-  top: 20px;
-  right: 40px;
+  top: 22px;
+  right: 32px;
   z-index: 10;
 }
 
-/* LOGO */
 .logo {
-  height: 5em;
+  height: 3.6rem;
   padding: 0;
-  will-change: filter;
-  transition: filter 300ms;
+  transition: filter 200ms;
 }
 
 .logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
+  filter: drop-shadow(0 4px 12px rgba(37, 99, 235, 0.25));
 }
 
 .card {
-  padding: 2em;
-  background-color: var(--bg-navy); /* TOTO NASTAVUJE FARBU POZADIA VIZUÁLNEJ KARTY (TERAZ JE TAM TLAČIDLO S POČÍTADLOM) */
-  border-radius: 12px;
-  text-align: center;
+  padding: 20px;
+  background-color: var(--bg-white);
+  border-radius: 14px;
+  box-shadow: var(--shadow-soft);
+  border: 1px solid var(--border-soft);
+  text-align: left;
 }
 
+.page-card-title {
+  margin-top: 0;
+  border-bottom: 1px solid var(--border-soft);
+  padding-bottom: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.title-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tree-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tree-control-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid var(--border-soft);
+  background-color: #fff;
+  color: var(--bg-navy);
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0;
+}
+
+.tree-control-btn:hover {
+  background-color: #eef2ff;
+  border-color: #c7d2fe;
+}
+
+.page-card-badge {
+  font-size: 0.85rem;
+  background-color: var(--bg-navy);
+  color: #fff;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-weight: 500;
+}
+
+.status-info {
+  color: var(--bg-navy);
+}
+
+.status-error {
+  color: var(--danger-500);
+  font-weight: 700;
+}
+
+.table-shell {
+  margin-left: 10px;
+  margin-top: 8px;
+  overflow-x: auto;
+}
+
+.table-base {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  min-width: 700px;
+  background-color: #fff;
+}
+
+.table-base th {
+  padding: 8px;
+  text-align: left;
+  background-color: var(--bg-cloud);
+  border-bottom: 2px solid var(--bg-smoke);
+}
+
+.table-base td {
+  padding: 8px;
+  border-bottom: 1px solid var(--bg-smoke);
+  vertical-align: top;
+}
+
+.table-actions {
+  padding: 4px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.btn-icon {
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  border: 1px solid transparent;
+}
+
+.btn-icon-primary {
+  background-color: var(--bg-navy);
+  color: #fff;
+}
+
+.btn-icon-secondary {
+  background-color: #fff;
+  color: var(--bg-navy);
+  border-color: var(--bg-smoke);
+  font-weight: 700;
+}
+
+.form-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.form-field label {
+  font-weight: 700;
+}
+
+.field-control {
+  width: 100%;
+  padding: 10px;
+  margin-top: 5px;
+  border-radius: 8px;
+  border: 1px solid var(--bg-smoke);
+  background-color: #f8fafc;
+  color: var(--bg-black);
+  box-sizing: border-box;
+}
+
+.form-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.btn-primary {
+  background: linear-gradient(180deg, var(--primary-500), var(--primary-600));
+  color: #fff;
+  border: none;
+  padding: 12px 16px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.btn-secondary {
+  background-color: #e2e8f0;
+  border: none;
+  color: #0f172a;
+  padding: 12px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.dashboard-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.dashboard-grid-2 {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 20px;
+}
+
+.chart-card {
+  border: 1px solid var(--bg-smoke);
+  border-radius: 10px;
+  padding: 15px;
+  background-color: #f8fafc;
+}
+
+.chart-card h3 {
+  text-align: center;
+  margin-top: 0;
+}
+
+@media (max-width: 1200px) {
+  .dashboard-grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 920px) {
+  .main-layout {
+    flex-direction: column;
+  }
+
+  .sidebar-container {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.15);
+  }
+
+  .content-container {
+    padding: 20px 14px;
+  }
+
+  .header {
+    justify-content: flex-start;
+    min-height: 56px;
+    padding-right: 90px;
+  }
+
+  .logo-container {
+    top: 14px;
+    right: 14px;
+  }
+
+  .logo {
+    height: 2.8rem;
+  }
+}

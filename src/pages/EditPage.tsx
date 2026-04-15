@@ -228,7 +228,7 @@ function EditPage() {
                         initialForms[act.crc5b_activitycodedirectoryid] = { 
                             time: isSourceActivity ? (sourceRecord.crc5b_hodiny || '').toString() : '', 
                             count: '', 
-                            note: isSourceActivity ? (sourceRecord.crc5b_popiscinnosti || '') : '' 
+                            note: isSourceActivity ? (sourceRecord.crc5b_poznamka || '') : '' 
                         };
                     });
                     setActivityForms(initialForms);
@@ -307,6 +307,8 @@ function EditPage() {
             // Získame objekt sub-aktivity pre pomenovanie ak chceme
             const actObj = activities.find(a => a.crc5b_activitycodedirectoryid === activityId);
             const actName = actObj ? actObj.crc5b_cinnost : 'Aktivita';
+            const codeObj = codes.find(c => c.crc5b_codedirectoryid === reportCode);
+            const codeName = codeObj ? codeObj.crc5b_code : '';
             const vname = `Výkaz: ${reportDate} - ${selectedCustomer} - ${actName}`;
 
             // Parse time as decimal number, default to 0 if empty
@@ -317,8 +319,9 @@ function EditPage() {
                 crc5b_hodiny: hodinyDb,
                 crc5b_lokalita: lokZaznamu,
                 crc5b_pracovnevykazyname: vname.substring(0, 100),
-                crc5b_popiscinnosti: data.note || '',
+                crc5b_poznamka: data.note || '',
                 crc5b_pracovnik: userProfile.displayName,
+                crc5b_popiscinnosti: `${codeName} - ${actName}`,
                 crc5b_zakaznik: selectedCustomer,
                 crc5b_email: userProfile.mail,
                 crc5b_rok: reportDate.split('-')[0],
@@ -379,6 +382,20 @@ function EditPage() {
         }
     };
 
+    // Funkcia pre odchytenie klávesy Enter vo formulári
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLFormElement>) => {
+        if (e.key === 'Enter') {
+            // Ak sme v textarea a držíme Shift, chceme nový riadok, nie odoslanie
+            if (e.target instanceof HTMLTextAreaElement && e.shiftKey) {
+                return;
+            }
+            // Zamedzíme štandardnému správaniu (napr. nový riadok v textarea alebo ďalší submit)
+            e.preventDefault();
+            // Zavoláme uloženie
+            handleSave(e as unknown as React.FormEvent);
+        }
+    };
+
     return (
         <div className="main-layout">
             {/* ĽAVÉ MENU (zkopírované z HomePage) */}
@@ -388,7 +405,7 @@ function EditPage() {
                 <div className="user-profile">
                     <div className="user-avatar" style={userProfile.photo ? { background: 'none' } : {}}>
                         {userProfile.photo ? (
-                            <img src={userProfile.photo} alt="Profil" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                            <img src={userProfile.photo} alt="Profil" className="user-avatar-image" />
                         ) : (
                             "👤"
                         )}
@@ -402,15 +419,15 @@ function EditPage() {
                 <h2>Menu</h2>
                 <ul className="menu-list">
                     {/* Tu presmerujeme späť na Home */}
-                    <li onClick={() => navigate('/')}>🏠 Domov</li>
+                    <li className="menu-item" onClick={() => navigate('/')}>🏠 Domov</li>
                     {/* Tu sme vizuálne označili, že sme aktuálne na tejto stránke */}
-                    <li style={{ backgroundColor: 'var(--bg-navy)', color: 'white' }}>{isEditMode ? '✏️ Úprava' : isCopyMode ? '📄 Kópia' : '➕ Nový výkaz'}</li>
-                    <li onClick={() => navigate('/DashboardPage')}>📊 Dashboard</li>
-                    <li onClick={() => window.open('https://apps.powerapps.com/play/e/86485853-792a-e67b-9761-e3ce683ba850/a/188b2b48-acfb-4a15-8142-75561b73805d?tenantId=1bc48a9d-3e02-4c94-a104-04b1960c5b3b&hint=2a9daae8-78d7-4372-b087-fbb3235e38c1&sourcetime=1774618589242&source=portal', '_blank')}>📅 Dochádzka</li>
+                    <li className="menu-item menu-item-active">{isEditMode ? '✏️ Úprava' : isCopyMode ? '📄 Kópia' : '➕ Nový výkaz'}</li>
+                    <li className="menu-item" onClick={() => navigate('/DashboardPage')}>📊 Dashboard</li>
+                    <li className="menu-item" onClick={() => window.open('https://apps.powerapps.com/play/e/86485853-792a-e67b-9761-e3ce683ba850/a/188b2b48-acfb-4a15-8142-75561b73805d?tenantId=1bc48a9d-3e02-4c94-a104-04b1960c5b3b&hint=2a9daae8-78d7-4372-b087-fbb3235e38c1&sourcetime=1774618589242&source=portal', '_blank')}>📅 Dochádzka</li>
                 </ul>
 
                 {/* VERZIA APLIKÁCIE (Čas buildu) */}
-                <div style={{ marginTop: 'auto', paddingTop: '20px', fontSize: '0.8em', color: 'var(--bg-smoke)', textAlign: 'center', opacity: 0.7 }}>
+                <div className="app-version">
                   Verzia: {typeof __BUILD_DATE__ !== 'undefined' ? __BUILD_DATE__ : 'Dev'}
                 </div>
             </div>
@@ -424,8 +441,8 @@ function EditPage() {
                     </a>
                 </div>
 
-                <div className="card" style={{ textAlign: 'left', maxWidth: '2000px', margin: '0 auto', backgroundColor: 'var(--bg-white)', color: 'var(--bg-black)' }}>
-                    <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                <div className="card" style={{ maxWidth: '2000px', margin: '0 auto' }}>
+                    <form onSubmit={handleSave} onKeyDown={handleKeyDown} className="form-layout">
 
                         {/* POLOŽKA: ZÁKAZNÍK (ORGANIZÁCIA) */}
                         <div>
@@ -508,7 +525,7 @@ function EditPage() {
                             <select
                                 value={reportLocation}
                                 onChange={(e) => setReportLocation(e.target.value)}
-                                style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '6px', border: '1px solid var(--bg-smoke)', backgroundColor: 'var(--bg-cloud)', color: 'var(--bg-black)', boxSizing: 'border-box' }}
+                                className="field-control"
                                 required
                             >
                                 <option value="" disabled>Vyberte lokalitu</option>
@@ -525,7 +542,8 @@ function EditPage() {
                                 type="date"
                                 value={reportDate}
                                 onChange={(e) => setReportDate(e.target.value)}
-                                style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '6px', border: '1px solid var(--bg-smoke)', backgroundColor: 'var(--bg-cloud)', color: 'var(--bg-black)', boxSizing: 'border-box', colorScheme: 'light' }}
+                                className="field-control"
+                                style={{ colorScheme: 'light' }}
                                 required
                             />
                         </div>
@@ -536,7 +554,7 @@ function EditPage() {
                             <select
                                 value={reportCode}
                                 onChange={(e) => setReportCode(e.target.value)}
-                                style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '6px', border: '1px solid var(--bg-smoke)', backgroundColor: 'var(--bg-cloud)', color: 'var(--bg-black)', boxSizing: 'border-box' }}
+                                className="field-control"
                                 required
                                 disabled={isLoadingCodes}
                             >
@@ -556,7 +574,7 @@ function EditPage() {
 
                         {!isLoadingActivities && activities.length > 0 && (
                             <div style={{ marginTop: '10px', border: '1px solid var(--bg-smoke)', borderRadius: '6px', overflowX: 'auto' }}>
-                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9em', backgroundColor: 'var(--bg-white)', minWidth: '600px' }}>
+                                <table className="table-base" style={{ minWidth: '600px' }}>
                                     <thead>
                                         <tr style={{ backgroundColor: 'var(--bg-cloud)', borderBottom: '2px solid var(--bg-smoke)' }}>
                                             <th style={{ padding: '10px', textAlign: 'left', width: '30%' }}>Názov</th>
@@ -568,7 +586,7 @@ function EditPage() {
                                         {activities.map((act) => {
                                             const id = act.crc5b_activitycodedirectoryid;
                                             return (
-                                                <tr key={id} style={{ borderBottom: '1px solid var(--bg-smoke)' }}>
+                                                <tr key={id}>
                                                     <td style={{ padding: '8px 10px', borderRight: '1px solid var(--bg-black)' }}>
                                                         {act.crc5b_cinnost}
                                                     </td>
@@ -604,12 +622,14 @@ function EditPage() {
                         )}
 
                         {/* TLAČIDLO ULOŽIŤ */}
-                        <button type="submit" style={{ marginTop: '10px', backgroundColor: 'var(--bg-navy)', padding: '12px', fontSize: '1.1em', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>
-                            💾 Uložiť výkaz
-                        </button>
-                        <button type="button" onClick={() => navigate('/')} style={{ backgroundColor: 'var(--bg-smoke)', border: 'none', color: '#000', padding: '10px', borderRadius: '8px', cursor: 'pointer' }}>
-                            ❌ Zrušiť
-                        </button>
+                        <div className="form-actions">
+                            <button type="submit" className="btn-primary">
+                                💾 Uložiť výkaz
+                            </button>
+                            <button type="button" onClick={() => navigate('/')} className="btn-secondary">
+                                ❌ Zrušiť
+                            </button>
+                        </div>
 
                     </form>
                 </div>
